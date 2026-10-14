@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production Meter - Simulation Dashboard</title>
+    <title>Production Meter - Full Control Dashboard</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root {
@@ -45,7 +45,8 @@
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: var(--text-muted); }
         .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
-        
+        .section-divider { font-size: 14px; font-weight: bold; color: var(--primary); margin: 15px 0 10px 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+
         .cloud-bar { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 30px; padding: 10px; }
     </style>
 </head>
@@ -56,7 +57,7 @@
             <div class="subtitle">Giám sát & Lưu trữ Google Sheets</div>
         </div>
         <div>
-            <div id="device-wifi-badge" class="status-badge" style="background: #dcfce7; color: #16a34a;">WEB: SẴN SÀNG (SIMULATION)</div>
+            <div id="device-wifi-badge" class="status-badge" style="background: #dcfce7; color: #16a34a;">WEB: SẴN SÀNG</div>
         </div>
     </div>
 
@@ -70,7 +71,7 @@
     <!-- TAB 1: TỔNG QUAN -->
     <div id="tab-0" class="tab-content active">
         <div class="card" style="background: #fefce8; border: 1px solid #fde047;">
-            <div class="card-title" style="color: #a16207;">BẢNG ĐIỀU KHIỂN & GIẢ LẬP OFFLINE (TEST NHANH)</div>
+            <div class="card-title" style="color: #a16207;">BẢNG ĐIỀU KHIỂN & GIẢ LẬP OFFLINE</div>
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-success" onclick="setSimulation(true)">▶ CHẠY (RUN)</button>
                 <button class="btn btn-danger" onclick="setSimulation(false)">■ DỪNG (STOP)</button>
@@ -139,21 +140,38 @@
 
     <!-- TAB 3: CÀI ĐẶT -->
     <div id="tab-2" class="tab-content">
-        <div class="card" style="max-width: 600px; margin: 0 auto;">
-            <div class="card-title">Cấu hình thông số phần cứng</div>
+        <div class="card" style="max-width: 650px; margin: 0 auto;">
+            <div class="card-title">Cấu hình thông số hệ thống & WiFi</div>
+            
+            <div class="section-divider">1. Cấu hình WiFi nhà xưởng</div>
+            <div class="form-group">
+                <label>Tên WiFi (SSID):</label>
+                <input type="text" id="input-wifi-ssid" value="SABEBA NEW" placeholder="Nhập tên WiFi nhà xưởng">
+            </div>
+            <div class="form-group">
+                <label>Mật khẩu WiFi (Password):</label>
+                <input type="password" id="input-wifi-pass" value="" placeholder="Nhập mật khẩu WiFi">
+            </div>
+
+            <div class="section-divider">2. Cấu hình thông số cơ khí & đo đạc</div>
             <div class="form-group">
                 <label>Đường kính trục cuốn (mm):</label>
-                <input type="number" id="input-diameter" value="120.0">
+                <input type="number" id="input-diameter" value="120.0" step="0.1">
             </div>
             <div class="form-group">
-                <label>Thời gian chờ tính dừng máy (giây):</label>
+                <label>Hệ số xung (Xung / vòng):</label>
+                <input type="number" id="input-pulses" value="100">
+            </div>
+            <div class="form-group">
+                <label>Thời gian chờ tính dừng máy (Timeout - giây):</label>
                 <input type="number" id="input-timeout" value="5">
             </div>
+
             <button class="btn btn-success" onclick="saveSettings()">LƯU CÀI ĐẶT XUỐNG ESP32</button>
         </div>
     </div>
 
-    <div class="cloud-bar" id="cloud-status">Trạng thái: Hoạt động ở chế độ kết hợp MQTT & Giả lập web.</div>
+    <div class="cloud-bar" id="cloud-status">Trạng thái: Hoạt động kết hợp MQTT & Giả lập web.</div>
 
     <script>
         let latestData = { speed: 0, batch: 0, day: 0, total: 1250.0, runSec: 0, stopSec: 0, stopCount: 0, shift: 1, wifi: true };
@@ -189,14 +207,13 @@
             document.getElementById('shift-val').textContent = "CA " + (d.shift || 1);
         }
 
-        // Bật/Tắt chế độ giả lập trực quan trên web
         function setSimulation(runState) {
             isSimulating = runState;
             if (isSimulating) {
                 document.getElementById('sim-status').innerText = "Trạng thái: Đang chạy giả lập (RUN). Số liệu đang tăng dần...";
                 if (simInterval) clearInterval(simInterval);
                 simInterval = setInterval(() => {
-                    latestData.speed = 15.5; // Tốc độ giả lập m/min
+                    latestData.speed = 15.5;
                     latestData.batch += 0.5;
                     latestData.day += 0.5;
                     latestData.total += 0.5;
@@ -212,21 +229,31 @@
                 updateUI(latestData);
             }
 
-            // Gửi lệnh qua MQTT nếu phần cứng đang cắm
             if (client && client.connected) {
                 client.publish('factory/production/control', runState ? 'RUN' : 'STOP');
             }
         }
 
         function saveSettings() {
+            let wifiSsid = document.getElementById('input-wifi-ssid').value;
+            let wifiPass = document.getElementById('input-wifi-pass').value;
             let diameter = document.getElementById('input-diameter').value;
+            let pulses = document.getElementById('input-pulses').value;
             let timeout = document.getElementById('input-timeout').value;
-            let payload = JSON.stringify({ diameter: diameter, timeout: timeout });
+
+            let configPayload = JSON.stringify({
+                ssid: wifiSsid,
+                pass: wifiPass,
+                diameter: parseFloat(diameter),
+                pulses: parseInt(pulses),
+                timeout: parseInt(timeout)
+            });
+
             if (client && client.connected) {
-                client.publish('factory/production/config', payload);
-                alert("Đã gửi cấu hình mới xuống ESP32 thành công!");
+                client.publish('factory/production/config', configPayload);
+                alert("Đã gửi toàn bộ cấu hình (WiFi, Trục cuốn, Hệ số xung) xuống ESP32 thành công!");
             } else {
-                alert("Đã lưu cấu hình giả lập trên Web!");
+                alert("Đã lưu cài đặt trên Web! (MQTT Client chưa kết nối trực tiếp thiết bị)");
             }
         }
 
@@ -243,7 +270,6 @@
                 timestamp: new Date().toISOString()
             };
 
-            // Đổi trạng thái hiển thị tạm thời
             document.getElementById('cloud-status').innerText = "Trạng thái: Đang gửi dữ liệu lên Google Sheets...";
 
             fetch(scriptUrl, {
@@ -269,17 +295,16 @@
             });
         }
 
-        // Vẫn duy trì kết nối MQTT Cloud nếu thiết bị thật online
         const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
 
         client.on('connect', function () {
-            document.getElementById('cloud-status').innerText = 'Trạng thái: Đã kết nối MQTT Cloud (Có thể nhận dữ liệu từ ESP32 thật hoặc dùng nút giả lập phía trên).';
+            document.getElementById('cloud-status').innerText = 'Trạng thái: Đã kết nối MQTT Cloud thành công!';
             client.subscribe('factory/production/meter1');
         });
 
         client.on('message', function (topic, message) {
             if (topic === 'factory/production/meter1') {
-                if (!isSimulating) { // Nếu không bật giả lập web thì lấy dữ liệu thực từ phần cứng gửi lên
+                if (!isSimulating) {
                     try {
                         let d = JSON.parse(message.toString());
                         updateUI(d);
