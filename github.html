@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Meter - Cloud Dashboard</title>
+    <!-- Sử dụng MQTT.js qua CDN bảo mật wss -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f6f9; --card-bg: #ffffff; --text-main: #1f2937;
+            --text-muted: #6b7280; --primary: #2563eb; --success: #16a34a;
+            --danger: #dc2626; --warning: #d97706; --border: #e5e7eb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-color); font-family: Arial, sans-serif; color: var(--text-main); padding-bottom: 30px; }
+        .header { background: #172033; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .title { font-size: 20px; font-weight: bold; }
+        .subtitle { font-size: 12px; opacity: 0.75; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 18px; border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .card-title { font-size: 13px; color: var(--text-muted); font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+        .big-value { font-size: 30px; font-weight: bold; color: var(--primary); }
+        .unit { font-size: 14px; color: var(--text-muted); font-weight: normal; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+        .status-run { background: #dcfce7; color: var(--success); }
+        .status-stop { background: #fee2e2; color: var(--danger); }
+        .btn { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 11px 18px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn:hover { opacity: 0.9; }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .cloud-bar { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 30px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="title">PRODUCTION METER</div>
+            <div class="subtitle">Giám sát đám mây thời gian thực</div>
+        </div>
+        <div>
+            <div id="device-wifi-badge" class="status-badge" style="background: #fee2e2; color: #dc2626;">ESP32: MẤT KẾT NỐI</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- ĐIỀU KHIỂN PHẦN CỨNG TỪ XA -->
+        <div class="card" style="background: #f0fdf4; border: 1px solid #bbf7d0; margin-bottom: 20px;">
+            <div class="card-title" style="color: #15803d;">Điều khiển phần cứng ESP32 từ xa qua Cloud</div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn btn-success" onclick="sendLedCommand('LED_ON')">BẬT ĐÈN LED ESP32</button>
+                <button class="btn btn-danger" onclick="sendLedCommand('LED_OFF')">TẮT ĐÈN LED ESP32</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Tốc độ hiện tại</div>
+                <div class="big-value"><span id="speed">0.0</span> <span class="unit">m/min</span></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Lô hiện tại (Batch)</div>
+                <div class="big-value" style="color: var(--success);"><span id="batch">0.0</span> <span class="unit">m</span></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Sản lượng ngày</div>
+                <div class="big-value" style="color: var(--warning);"><span id="day-m">0.0</span> <span class="unit">m</span></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Tổng sản lượng</div>
+                <div class="big-value" style="color: #9333ea;"><span id="total-m">0.0</span> <span class="unit">m</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="cloud-bar" id="cloud-status">Trạng thái: Đang kết nối MQTT Cloud...</div>
+
+    <script>
+        let latestData = { speed: 0, batch: 0, day: 0, total: 0, wifi: false };
+
+        function updateUI(d) {
+            document.getElementById('speed').textContent = (d.speed || 0).toFixed(1);
+            document.getElementById('batch').textContent = (d.batch || 0).toFixed(1);
+            document.getElementById('day-m').textContent = (d.day || 0).toFixed(1);
+            document.getElementById('total-m').textContent = (d.total || 0).toFixed(1);
+
+            let wifiBadge = document.getElementById('device-wifi-badge');
+            if (d.wifi) {
+                wifiBadge.textContent = "ESP32: ĐÃ KẾT NỐI MẠNG";
+                wifiBadge.style.background = "#dcfce7";
+                wifiBadge.style.color = "#16a34a";
+            } else {
+                wifiBadge.textContent = "ESP32: MẤT KẾT NỐI MẠNG";
+                wifiBadge.style.background = "#fee2e2";
+                wifiBadge.style.color = "#dc2626";
+            }
+        }
+
+        function sendLedCommand(cmd) {
+            if (client) {
+                client.publish('factory/production/control', cmd);
+                document.getElementById('cloud-status').innerText = "Đã gửi lệnh [" + cmd + "] tới ESP32 thành công!";
+            } else {
+                alert("MQTT Client chưa sẵn sàng!");
+            }
+        }
+
+        // Kết nối MQTT Cloud qua WebSocket bảo mật (wss)
+        const client = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
+
+        client.on('connect', function () {
+            document.getElementById('cloud-status').innerText = 'Trạng thái: Đã kết nối MQTT Cloud thành công!';
+            client.subscribe('factory/production/meter1');
+        });
+
+        client.on('message', function (topic, message) {
+            if (topic === 'factory/production/meter1') {
+                try {
+                    let d = JSON.parse(message.toString());
+                    updateUI(d);
+                } catch(e) {
+                    console.log("Lỗi parse JSON", e);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
