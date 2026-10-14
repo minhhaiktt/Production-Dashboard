@@ -107,7 +107,7 @@
         }
 
         // Kết nối MQTT Cloud qua WebSocket bảo mật (wss)
-        const client = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
 
         client.on('connect', function () {
             document.getElementById('cloud-status').innerText = 'Trạng thái: Đã kết nối MQTT Cloud thành công!';
