@@ -1,319 +1,2333 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production Meter - Full Control Dashboard</title>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <style>
-        :root {
-            --bg-color: #f4f6f9; --card-bg: #ffffff; --text-main: #1f2937;
-            --text-muted: #6b7280; --primary: #2563eb; --success: #16a34a;
-            --danger: #dc2626; --warning: #d97706; --border: #e5e7eb;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg-color); font-family: Arial, sans-serif; color: var(--text-main); padding-bottom: 30px; }
-        .header { background: #172033; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .title { font-size: 20px; font-weight: bold; }
-        .subtitle { font-size: 12px; opacity: 0.75; }
-        
-        /* Tab Navigation */
-        .tab-bar { background: #ffffff; display: flex; border-bottom: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .tab-btn { flex: 1; padding: 14px; text-align: center; font-weight: bold; font-size: 14px; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
-        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: #f8fafc; }
-        .tab-content { display: none; max-width: 1200px; margin: 20px auto; padding: 0 15px; }
-        .tab-content.active { display: block; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .card { background: var(--card-bg); border-radius: 12px; padding: 18px; border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .card-title { font-size: 13px; color: var(--text-muted); font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
-        .big-value { font-size: 30px; font-weight: bold; color: var(--primary); }
-        .unit { font-size: 14px; color: var(--text-muted); font-weight: normal; }
-        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; }
-        .btn { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 11px 18px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; transition: opacity 0.2s; margin-top: 10px; }
-        .btn:hover { opacity: 0.9; }
-        .btn-success { background: var(--success); }
-        .btn-danger { background: var(--danger); }
-        
-        /* Table Style for Statistics */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { border: 1px solid var(--border); padding: 10px; text-align: left; }
-        th { background: #f8fafc; color: var(--text-main); }
+<title>METER-01 - Production Dashboard</title>
 
-        /* Form Inputs */
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: var(--text-muted); }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
-        .section-divider { font-size: 14px; font-weight: bold; color: var(--primary); margin: 15px 0 10px 0; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
-        .cloud-bar { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 30px; padding: 10px; }
-    </style>
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,Helvetica,sans-serif;
+    background:#eef1f5;
+    color:#1f2937;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.header{
+    background:#17202a;
+    color:white;
+    padding:18px 25px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+}
+
+.title{
+    font-size:25px;
+    font-weight:bold;
+}
+
+.subtitle{
+    font-size:13px;
+    color:#bfc7d1;
+    margin-top:4px;
+}
+
+.connection{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:14px;
+}
+
+.status-dot{
+    width:11px;
+    height:11px;
+    border-radius:50%;
+    background:#e74c3c;
+}
+
+.status-dot.connected{
+    background:#2ecc71;
+}
+
+/* =========================================================
+   NAV
+   ========================================================= */
+
+.nav{
+    background:white;
+    display:flex;
+    border-bottom:1px solid #d7dce2;
+}
+
+.nav button{
+    flex:1;
+    padding:15px;
+    border:0;
+    background:white;
+    font-weight:bold;
+    cursor:pointer;
+    font-size:15px;
+}
+
+.nav button.active{
+    color:#1677ff;
+    border-bottom:3px solid #1677ff;
+}
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.container{
+    max-width:1500px;
+    margin:auto;
+    padding:20px;
+}
+
+.page{
+    display:none;
+}
+
+.page.active{
+    display:block;
+}
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.card{
+    background:white;
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+
+.card-title{
+    font-size:18px;
+    font-weight:bold;
+    margin-bottom:15px;
+}
+
+/* =========================================================
+   GRID
+   ========================================================= */
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
+}
+
+.grid-3{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:15px;
+}
+
+.grid-2{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+}
+
+@media(max-width:1000px){
+    .grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+
+@media(max-width:650px){
+    .grid,
+    .grid-2,
+    .grid-3{
+        grid-template-columns:1fr;
+    }
+
+    .header{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+}
+
+/* =========================================================
+   KPI
+   ========================================================= */
+
+.kpi{
+    background:white;
+    border-radius:10px;
+    padding:18px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.kpi-label{
+    color:#6b7280;
+    font-size:14px;
+}
+
+.kpi-value{
+    font-size:30px;
+    font-weight:bold;
+    margin-top:8px;
+}
+
+.kpi-unit{
+    font-size:14px;
+    color:#6b7280;
+}
+
+/* =========================================================
+   SPEED
+   ========================================================= */
+
+.speed-card{
+    text-align:center;
+}
+
+.speed-value{
+    font-size:64px;
+    font-weight:bold;
+    color:#1677ff;
+}
+
+.speed-unit{
+    font-size:20px;
+    color:#6b7280;
+}
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.status{
+    display:inline-block;
+    padding:8px 20px;
+    border-radius:30px;
+    font-weight:bold;
+    font-size:16px;
+}
+
+.status.RUN{
+    background:#d9f7e4;
+    color:#178542;
+}
+
+.status.STOP{
+    background:#ffe0e0;
+    color:#c62828;
+}
+
+/* =========================================================
+   BUTTON
+   ========================================================= */
+
+button.action{
+    border:0;
+    border-radius:7px;
+    padding:12px 18px;
+    cursor:pointer;
+    font-weight:bold;
+    margin:4px;
+    font-size:14px;
+}
+
+.btn-run{
+    background:#2ecc71;
+    color:white;
+}
+
+.btn-stop{
+    background:#e74c3c;
+    color:white;
+}
+
+.btn-blue{
+    background:#1677ff;
+    color:white;
+}
+
+.btn-gray{
+    background:#e5e7eb;
+    color:#111827;
+}
+
+.btn-orange{
+    background:#f39c12;
+    color:white;
+}
+
+.btn-danger{
+    background:#c62828;
+    color:white;
+}
+
+/* =========================================================
+   SPEED BUTTON
+   ========================================================= */
+
+.speed-buttons{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.speed-buttons button{
+    flex:1;
+    min-width:110px;
+}
+
+/* =========================================================
+   SHIFT
+   ========================================================= */
+
+.shift-box{
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:16px;
+}
+
+.shift-title{
+    font-size:17px;
+    font-weight:bold;
+}
+
+.shift-value{
+    font-size:30px;
+    font-weight:bold;
+    margin-top:8px;
+}
+
+.shift-info{
+    margin-top:5px;
+    color:#6b7280;
+    font-size:13px;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.table-wrap{
+    overflow-x:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,
+td{
+    padding:11px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+    white-space:nowrap;
+}
+
+th{
+    background:#f3f4f6;
+}
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
+.form-row{
+    display:grid;
+    grid-template-columns:220px 1fr;
+    align-items:center;
+    margin-bottom:15px;
+    gap:15px;
+}
+
+.form-row label{
+    font-weight:bold;
+}
+
+input{
+    width:100%;
+    padding:11px;
+    border:1px solid #ccd1d8;
+    border-radius:6px;
+    font-size:15px;
+}
+
+/* =========================================================
+   FOOTER INFO
+   ========================================================= */
+
+.info{
+    color:#6b7280;
+    font-size:13px;
+}
+
+.mqtt-ok{
+    color:#178542;
+    font-weight:bold;
+}
+
+.mqtt-off{
+    color:#c62828;
+    font-weight:bold;
+}
+
+/* =========================================================
+   NOTIFICATION
+   ========================================================= */
+
+.toast{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    background:#17202a;
+    color:white;
+    padding:13px 18px;
+    border-radius:7px;
+    display:none;
+    z-index:9999;
+}
+
+</style>
 </head>
+
 <body>
-    <div class="header">
-        <div>
-            <div class="title">PRODUCTION METER</div>
-            <div class="subtitle">Giám sát & Lưu trữ Google Sheets</div>
-        </div>
-        <div>
-            <div id="device-wifi-badge" class="status-badge" style="background: #dcfce7; color: #16a34a;">WEB: SẴN SÀNG</div>
-        </div>
-    </div>
 
-    <!-- 3 TAB NAVIGATION -->
-    <div class="tab-bar">
-        <div class="tab-btn active" onclick="switchTab(0)">TỔNG QUAN</div>
-        <div class="tab-btn" onclick="switchTab(1)">THỐNG KÊ</div>
-        <div class="tab-btn" onclick="switchTab(2)">CÀI ĐẶT</div>
-    </div>
+<!-- ========================================================
+     HEADER
+     ======================================================== -->
 
-    <!-- TAB 1: TỔNG QUAN -->
-    <div id="tab-0" class="tab-content active">
-        <div class="card" style="background: #fefce8; border: 1px solid #fde047;">
-            <div class="card-title" style="color: #a16207;">BẢNG ĐIỀU KHIỂN & GIẢ LẬP OFFLINE</div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-success" onclick="setSimulation(true)">▶ CHẠY (RUN)</button>
-                <button class="btn btn-danger" onclick="setSimulation(false)">■ DỪNG (STOP)</button>
-            </div>
-            <button class="btn" style="background: #16a34a;" onclick="syncToGoogleSheet()">GHI DỮ LIỆU LÊN GOOGLE SHEET</button>
-            <div id="sim-status" style="font-size: 12px; color: #854d0e; margin-top: 8px;">Trạng thái: Đang dừng giả lập. Bấm Chạy để test số liệu.</div>
+<div class="header">
+
+    <div>
+        <div class="title">
+            PRODUCTION METER
         </div>
 
-        <div class="grid" style="margin-top: 15px;">
-            <div class="card">
-                <div class="card-title">Tốc độ hiện tại</div>
-                <div class="big-value"><span id="speed">0.0</span> <span class="unit">m/min</span></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Lô hiện tại (Batch)</div>
-                <div class="big-value" style="color: var(--success);"><span id="batch">0.0</span> <span class="unit">m</span></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Sản lượng ngày</div>
-                <div class="big-value" style="color: var(--warning);"><span id="day-m">0.0</span> <span class="unit">m</span></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Tổng sản lượng</div>
-                <div class="big-value" style="color: #9333ea;"><span id="total-m">0.0</span> <span class="unit">m</span></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Thời gian chạy</div>
-                <div class="big-value" style="color: var(--success); font-size: 24px;" id="run-sec">00:00:00</div>
-            </div>
-            <div class="card">
-                <div class="card-title">Thời gian dừng</div>
-                <div class="big-value" style="color: var(--danger); font-size: 24px;" id="stop-sec">00:00:00</div>
-            </div>
-            <div class="card">
-                <div class="card-title">Số lần Stop</div>
-                <div class="big-value" style="color: var(--primary);" id="stop-count">0</div>
-            </div>
-            <div class="card">
-                <div class="card-title">Ca hiện tại</div>
-                <div class="big-value" style="color: #2563eb;" id="shift-val">CA 1</div>
-            </div>
+        <div class="subtitle">
+            METER-01 • Giám sát sản lượng
         </div>
     </div>
 
-    <!-- TAB 2: THỐNG KÊ -->
-    <div id="tab-1" class="tab-content">
-        <div class="card">
-            <div class="card-title">Lịch sử đồng bộ gần đây</div>
+    <div class="connection">
+
+        <span id="statusDot"
+              class="status-dot"></span>
+
+        <span id="mqttStatus">
+            MQTT OFFLINE
+        </span>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================================
+     NAV
+     ======================================================== -->
+
+<div class="nav">
+
+    <button
+        id="nav0"
+        class="active"
+        onclick="switchTab(0)">
+        TỔNG QUAN
+    </button>
+
+    <button
+        id="nav1"
+        onclick="switchTab(1)">
+        THỐNG KÊ
+    </button>
+
+    <button
+        id="nav2"
+        onclick="switchTab(2)">
+        CÀI ĐẶT
+    </button>
+
+</div>
+
+
+<div class="container">
+
+
+<!-- ========================================================
+     PAGE 1 - OVERVIEW
+     ======================================================== -->
+
+<div id="page0" class="page active">
+
+    <!-- SPEED -->
+
+    <div class="card speed-card">
+
+        <div class="card-title">
+            TỐC ĐỘ HIỆN TẠI
+        </div>
+
+        <div
+            id="speed"
+            class="speed-value">
+            0
+        </div>
+
+        <div class="speed-unit">
+            m/min
+        </div>
+
+        <br>
+
+        <span
+            id="machineStatus"
+            class="status STOP">
+            STOP
+        </span>
+
+    </div>
+
+
+    <!-- KPI -->
+
+    <div class="grid">
+
+        <div class="kpi">
+
+            <div class="kpi-label">
+                Sản lượng Batch
+            </div>
+
+            <div
+                id="batch"
+                class="kpi-value">
+                0.0
+            </div>
+
+            <div class="kpi-unit">
+                mét
+            </div>
+
+        </div>
+
+
+        <div class="kpi">
+
+            <div class="kpi-label">
+                Sản lượng ngày
+            </div>
+
+            <div
+                id="day"
+                class="kpi-value">
+                0.0
+            </div>
+
+            <div class="kpi-unit">
+                mét
+            </div>
+
+        </div>
+
+
+        <div class="kpi">
+
+            <div class="kpi-label">
+                Tổng sản lượng
+            </div>
+
+            <div
+                id="total"
+                class="kpi-value">
+                0.0
+            </div>
+
+            <div class="kpi-unit">
+                mét
+            </div>
+
+        </div>
+
+
+        <div class="kpi">
+
+            <div class="kpi-label">
+                Ca hiện tại
+            </div>
+
+            <div
+                id="currentShift"
+                class="kpi-value">
+                CA 1
+            </div>
+
+            <div
+                id="shiftTime"
+                class="kpi-unit">
+                06:00 - 14:00
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- MACHINE CONTROL -->
+
+    <div class="card">
+
+        <div class="card-title">
+            ĐIỀU KHIỂN MÁY
+        </div>
+
+        <button
+            class="action btn-run"
+            onclick="sendCommand('RUN')">
+            ▶ RUN
+        </button>
+
+        <button
+            class="action btn-stop"
+            onclick="sendCommand('STOP')">
+            ■ STOP
+        </button>
+
+        <hr>
+
+        <div class="card-title">
+            DEMO TỐC ĐỘ
+        </div>
+
+        <div class="speed-buttons">
+
+            <button
+                class="action btn-blue"
+                onclick="sendCommand('SPEED:50')">
+                50 m/min
+            </button>
+
+            <button
+                class="action btn-blue"
+                onclick="sendCommand('SPEED:100')">
+                100 m/min
+            </button>
+
+            <button
+                class="action btn-blue"
+                onclick="sendCommand('SPEED:150')">
+                150 m/min
+            </button>
+
+            <button
+                class="action btn-blue"
+                onclick="sendCommand('SPEED:200')">
+                200 m/min
+            </button>
+
+            <button
+                class="action btn-blue"
+                onclick="sendCommand('SPEED:250')">
+                250 m/min
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- PRODUCTION TIME -->
+
+    <div class="grid-3">
+
+        <div class="kpi">
+
+            <div class="kpi-label">
+                Thời gian RUN
+            </div>
+
+            <div
+                id="runTime"
+                class="kpi-value">
+                00:00:00
+            </div>
+
+        </div>
+
+
+        <div class="kpi">
+
+            <div class="kpi-label">
+                Thời gian STOP
+            </div>
+
+            <div
+                id="stopTime"
+                class="kpi-value">
+                00:00:00
+            </div>
+
+        </div>
+
+
+        <div class="kpi">
+
+            <div class="kpi-label">
+                Số lần STOP
+            </div>
+
+            <div
+                id="stopCount"
+                class="kpi-value">
+                0
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- SHIFT -->
+
+    <div class="card">
+
+        <div class="card-title">
+            SẢN LƯỢNG THEO CA
+        </div>
+
+        <div class="grid-3">
+
+            <div class="shift-box">
+
+                <div class="shift-title">
+                    CA 1
+                </div>
+
+                <div class="shift-info">
+                    06:00 - 14:00
+                </div>
+
+                <div
+                    id="shift1"
+                    class="shift-value">
+                    0.0 m
+                </div>
+
+            </div>
+
+
+            <div class="shift-box">
+
+                <div class="shift-title">
+                    CA 2
+                </div>
+
+                <div class="shift-info">
+                    14:00 - 22:00
+                </div>
+
+                <div
+                    id="shift2"
+                    class="shift-value">
+                    0.0 m
+                </div>
+
+            </div>
+
+
+            <div class="shift-box">
+
+                <div class="shift-title">
+                    CA 3
+                </div>
+
+                <div class="shift-info">
+                    22:00 - 06:00
+                </div>
+
+                <div
+                    id="shift3"
+                    class="shift-value">
+                    0.0 m
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- SYSTEM -->
+
+    <div class="card">
+
+        <div class="card-title">
+            THÔNG TIN HỆ THỐNG
+        </div>
+
+        <div class="grid-3">
+
+            <div>
+                <b>Device</b>
+                <br>
+                <span id="device">
+                    METER-01
+                </span>
+            </div>
+
+            <div>
+                <b>IP Address</b>
+                <br>
+                <span id="ip">
+                    --
+                </span>
+            </div>
+
+            <div>
+                <b>RSSI</b>
+                <br>
+                <span id="rssi">
+                    --
+                </span>
+                dBm
+            </div>
+
+            <div>
+                <b>ESP32 Time</b>
+                <br>
+                <span id="deviceTime">
+                    --
+                </span>
+            </div>
+
+            <div>
+                <b>Diameter</b>
+                <br>
+                <span id="diameter">
+                    120
+                </span>
+                mm
+            </div>
+
+            <div>
+                <b>Meter / Rev</b>
+                <br>
+                <span id="meterRev">
+                    0.37699
+                </span>
+                m
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================================
+     PAGE 2 - STATISTICS
+     ======================================================== -->
+
+<div id="page1" class="page">
+
+    <div class="card">
+
+        <div class="card-title">
+            THỐNG KÊ SẢN LƯỢNG
+        </div>
+
+        <div class="grid">
+
+            <div class="kpi">
+
+                <div class="kpi-label">
+                    Ca 1
+                </div>
+
+                <div
+                    id="statShift1"
+                    class="kpi-value">
+                    0.0
+                </div>
+
+                <div class="kpi-unit">
+                    mét
+                </div>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <div class="kpi-label">
+                    Ca 2
+                </div>
+
+                <div
+                    id="statShift2"
+                    class="kpi-value">
+                    0.0
+                </div>
+
+                <div class="kpi-unit">
+                    mét
+                </div>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <div class="kpi-label">
+                    Ca 3
+                </div>
+
+                <div
+                    id="statShift3"
+                    class="kpi-value">
+                    0.0
+                </div>
+
+                <div class="kpi-unit">
+                    mét
+                </div>
+
+            </div>
+
+
+            <div class="kpi">
+
+                <div class="kpi-label">
+                    Tổng
+                </div>
+
+                <div
+                    id="statTotal"
+                    class="kpi-value">
+                    0.0
+                </div>
+
+                <div class="kpi-unit">
+                    mét
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- SHIFT DETAILS -->
+
+    <div class="card">
+
+        <div class="card-title">
+            CHI TIẾT TỪNG CA
+        </div>
+
+        <div class="table-wrap">
+
             <table>
+
                 <thead>
+
                     <tr>
-                        <th>Thời gian</th>
+
                         <th>Ca</th>
-                        <th>Tốc độ (m/min)</th>
-                        <th>Batch (m)</th>
-                        <th>Tổng sản lượng (m)</th>
-                        <th>Trạng thái</th>
+
+                        <th>Thời gian</th>
+
+                        <th>Sản lượng</th>
+
+                        <th>RUN</th>
+
+                        <th>STOP</th>
+
+                        <th>Số lần STOP</th>
+
                     </tr>
+
                 </thead>
-                <tbody id="history-table-body">
-                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Chưa có dữ liệu đồng bộ trong phiên này.</td></tr>
+
+                <tbody>
+
+                    <tr>
+
+                        <td>CA 1</td>
+
+                        <td>06:00 - 14:00</td>
+
+                        <td id="tableShift1">
+                            0.0 m
+                        </td>
+
+                        <td id="tableRun1">
+                            00:00:00
+                        </td>
+
+                        <td id="tableStop1">
+                            00:00:00
+                        </td>
+
+                        <td id="tableStopCount1">
+                            0
+                        </td>
+
+                    </tr>
+
+
+                    <tr>
+
+                        <td>CA 2</td>
+
+                        <td>14:00 - 22:00</td>
+
+                        <td id="tableShift2">
+                            0.0 m
+                        </td>
+
+                        <td id="tableRun2">
+                            00:00:00
+                        </td>
+
+                        <td id="tableStop2">
+                            00:00:00
+                        </td>
+
+                        <td id="tableStopCount2">
+                            0
+                        </td>
+
+                    </tr>
+
+
+                    <tr>
+
+                        <td>CA 3</td>
+
+                        <td>22:00 - 06:00</td>
+
+                        <td id="tableShift3">
+                            0.0 m
+                        </td>
+
+                        <td id="tableRun3">
+                            00:00:00
+                        </td>
+
+                        <td id="tableStop3">
+                            00:00:00
+                        </td>
+
+                        <td id="tableStopCount3">
+                            0
+                        </td>
+
+                    </tr>
+
                 </tbody>
+
             </table>
+
         </div>
+
     </div>
 
-    <!-- TAB 3: CÀI ĐẶT -->
-    <div id="tab-2" class="tab-content">
-        <div class="card" style="max-width: 650px; margin: 0 auto;">
-            <div class="card-title">Cấu hình thông số hệ thống & WiFi</div>
-            
-            <div class="section-divider">1. Cấu hình WiFi nhà xưởng</div>
-            <div class="form-group">
-                <label>Tên WiFi (SSID):</label>
-                <input type="text" id="input-wifi-ssid" value="SABEBA NEW" placeholder="Nhập tên WiFi nhà xưởng">
-            </div>
-            <div class="form-group">
-                <label>Mật khẩu WiFi (Password):</label>
-                <input type="password" id="input-wifi-pass" value="" placeholder="Nhập mật khẩu WiFi">
-            </div>
 
-            <div class="section-divider">2. Cấu hình thông số cơ khí & đo đạc</div>
-            <div class="form-group">
-                <label>Đường kính trục cuốn (mm):</label>
-                <input type="number" id="input-diameter" value="120.0" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Hệ số xung (Xung / vòng):</label>
-                <input type="number" id="input-pulses" value="100">
-            </div>
-            <div class="form-group">
-                <label>Thời gian chờ tính dừng máy (Timeout - giây):</label>
-                <input type="number" id="input-timeout" value="5">
-            </div>
+    <!-- GOOGLE SHEET -->
 
-            <button class="btn btn-success" onclick="saveSettings()">LƯU CÀI ĐẶT XUỐNG ESP32</button>
+    <div class="card">
+
+        <div class="card-title">
+            GOOGLE SHEETS
         </div>
+
+        <p class="info">
+            Gửi snapshot hiện tại lên Google Apps Script.
+        </p>
+
+        <button
+            class="action btn-blue"
+            onclick="syncToGoogleSheet()">
+            Đồng bộ Google Sheets
+        </button>
+
     </div>
 
-    <div class="cloud-bar" id="cloud-status">Trạng thái: Hoạt động kết hợp MQTT & Giả lập web.</div>
 
-    <script>
-        let latestData = { speed: 0, batch: 0, day: 0, total: 1250.0, runSec: 0, stopSec: 0, stopCount: 0, shift: 1, wifi: true };
-        let isSimulating = false;
-        let simInterval = null;
+    <!-- RESET -->
 
-        function switchTab(index) {
-            let tabs = document.querySelectorAll('.tab-btn');
-            let contents = document.querySelectorAll('.tab-content');
-            tabs.forEach((t, i) => {
-                t.classList.toggle('active', i === index);
-                contents[i].classList.toggle('active', i === index);
-            });
+    <div class="card">
+
+        <div class="card-title">
+            RESET DỮ LIỆU
+        </div>
+
+        <button
+            class="action btn-orange"
+            onclick="resetBatch()">
+            Reset Batch
+        </button>
+
+        <button
+            class="action btn-orange"
+            onclick="resetDay()">
+            Reset Ngày
+        </button>
+
+        <button
+            class="action btn-danger"
+            onclick="resetTotal()">
+            Reset Tổng
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================================
+     PAGE 3 - SETTINGS
+     ======================================================== -->
+
+<div id="page2" class="page">
+
+    <div class="card">
+
+        <div class="card-title">
+            CÀI ĐẶT THIẾT BỊ
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                WiFi SSID
+            </label>
+
+            <input
+                id="wifiSSID"
+                value="SABEPA NEW">
+
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                WiFi Password
+            </label>
+
+            <input
+                id="wifiPassword"
+                type="password"
+                value="Sabepa@123">
+
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                Đường kính trục (mm)
+            </label>
+
+            <input
+                id="settingDiameter"
+                type="number"
+                step="0.1"
+                value="120">
+
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                Pulses / Revolution
+            </label>
+
+            <input
+                id="settingPulses"
+                type="number"
+                step="1"
+                value="1">
+
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                Stop Timeout (s)
+            </label>
+
+            <input
+                id="settingTimeout"
+                type="number"
+                step="1"
+                value="5">
+
+        </div>
+
+
+        <button
+            class="action btn-blue"
+            onclick="saveSettings()">
+            LƯU CẤU HÌNH
+        </button>
+
+    </div>
+
+
+    <!-- MQTT -->
+
+    <div class="card">
+
+        <div class="card-title">
+            MQTT
+        </div>
+
+        <div class="form-row">
+
+            <label>
+                Broker
+            </label>
+
+            <input
+                value="broker.hivemq.com"
+                readonly>
+
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                WebSocket
+            </label>
+
+            <input
+                value="wss://broker.hivemq.com:8884/mqtt"
+                readonly>
+
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                Telemetry Topic
+            </label>
+
+            <input
+                value="factory/production/meter1"
+                readonly>
+
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                Control Topic
+            </label>
+
+            <input
+                value="factory/production/control"
+                readonly>
+
+        </div>
+
+
+        <div class="form-row">
+
+            <label>
+                Config Topic
+            </label>
+
+            <input
+                value="factory/production/config"
+                readonly>
+
+        </div>
+
+    </div>
+
+
+    <!-- HARDWARE -->
+
+    <div class="card">
+
+        <div class="card-title">
+            THÔNG TIN PHẦN CỨNG
+        </div>
+
+        <table>
+
+            <tr>
+                <td>Board</td>
+                <td>ESP32-S3 N16R8</td>
+            </tr>
+
+            <tr>
+                <td>Device</td>
+                <td>METER-01</td>
+            </tr>
+
+            <tr>
+                <td>Hall Sensor</td>
+                <td>GPIO27</td>
+            </tr>
+
+            <tr>
+                <td>Reset Batch</td>
+                <td>GPIO25</td>
+            </tr>
+
+            <tr>
+                <td>Reset Total</td>
+                <td>GPIO33</td>
+            </tr>
+
+            <tr>
+                <td>LED</td>
+                <td>GPIO2</td>
+            </tr>
+
+            <tr>
+                <td>Trục DEMO</td>
+                <td>Ø120 mm</td>
+            </tr>
+
+            <tr>
+                <td>Chu vi</td>
+                <td>0.376991 m/rev</td>
+            </tr>
+
+        </table>
+
+    </div>
+
+</div>
+
+</div>
+
+
+<!-- ========================================================
+     TOAST
+     ======================================================== -->
+
+<div
+    id="toast"
+    class="toast">
+</div>
+
+
+<script>
+
+/* ==========================================================
+   MQTT CONFIG
+   ========================================================== */
+
+const MQTT_URL =
+    "wss://broker.hivemq.com:8884/mqtt";
+
+const TELEMETRY_TOPIC =
+    "factory/production/meter1";
+
+const CONTROL_TOPIC =
+    "factory/production/control";
+
+const CONFIG_TOPIC =
+    "factory/production/config";
+
+
+/* ==========================================================
+   GOOGLE APPS SCRIPT
+   ========================================================== */
+
+const GOOGLE_SCRIPT_URL =
+"https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec";
+
+
+/* ==========================================================
+   DATA
+   ========================================================== */
+
+let latestData = {
+
+    device:"METER-01",
+
+    speed:0,
+
+    batch:0,
+
+    day:0,
+
+    total:0,
+
+    runSec:0,
+
+    stopSec:0,
+
+    stopCount:0,
+
+    shift:1,
+
+    shiftName:"CA 1",
+
+    shift1:0,
+    shift2:0,
+    shift3:0,
+
+    shiftRun1:0,
+    shiftRun2:0,
+    shiftRun3:0,
+
+    shiftStop1:0,
+    shiftStop2:0,
+    shiftStop3:0,
+
+    shiftStopCount1:0,
+    shiftStopCount2:0,
+    shiftStopCount3:0,
+
+    diameter:120,
+
+    pulses:1,
+
+    meterRev:0.376991,
+
+    timeout:5,
+
+    ip:"--",
+
+    rssi:0,
+
+    time:"--",
+
+    status:"STOP"
+
+};
+
+
+/* ==========================================================
+   TAB
+   ========================================================== */
+
+function switchTab(index){
+
+    for(let i=0;i<3;i++){
+
+        document
+            .getElementById("page"+i)
+            .classList.remove("active");
+
+        document
+            .getElementById("nav"+i)
+            .classList.remove("active");
+
+    }
+
+    document
+        .getElementById("page"+index)
+        .classList.add("active");
+
+    document
+        .getElementById("nav"+index)
+        .classList.add("active");
+}
+
+
+/* ==========================================================
+   FORMAT NUMBER
+   ========================================================== */
+
+function formatNumber(value){
+
+    if(value === undefined ||
+       value === null ||
+       isNaN(value)){
+
+        return "0.0";
+
+    }
+
+    return Number(value).toLocaleString(
+        "vi-VN",
+        {
+            minimumFractionDigits:1,
+            maximumFractionDigits:1
         }
+    );
+}
 
-        function formatTime(sec) {
-            sec = Math.max(0, Math.floor(sec));
-            let h = String(Math.floor(sec / 3600)).padStart(2,'0');
-            let m = String(Math.floor((sec % 3600) / 60)).padStart(2,'0');
-            let s = String(sec % 60).padStart(2,'0');
-            return h + ':' + m + ':' + s;
-        }
 
-        function updateUI(d) {
-            latestData = d;
-            document.getElementById('speed').textContent = (d.speed || 0).toFixed(1);
-            document.getElementById('batch').textContent = (d.batch || 0).toFixed(1);
-            document.getElementById('day-m').textContent = (d.day || 0).toFixed(1);
-            document.getElementById('total-m').textContent = (d.total || 0).toFixed(1);
-            document.getElementById('run-sec').textContent = formatTime(d.runSec);
-            document.getElementById('stop-sec').textContent = formatTime(d.stopSec);
-            document.getElementById('stop-count').textContent = d.stopCount || 0;
-            document.getElementById('shift-val').textContent = "CA " + (d.shift || 1);
-        }
+/* ==========================================================
+   FORMAT TIME
+   ========================================================== */
 
-        function setSimulation(runState) {
-            isSimulating = runState;
-            if (isSimulating) {
-                document.getElementById('sim-status').innerText = "Trạng thái: Đang chạy giả lập (RUN). Số liệu đang tăng dần...";
-                if (simInterval) clearInterval(simInterval);
-                simInterval = setInterval(() => {
-                    latestData.speed = 15.5;
-                    latestData.batch += 0.5;
-                    latestData.day += 0.5;
-                    latestData.total += 0.5;
-                    latestData.runSec += 1;
-                    updateUI(latestData);
-                }, 1000);
-            } else {
-                if (simInterval) clearInterval(simInterval);
-                latestData.speed = 0.0;
-                latestData.stopSec += 1;
-                latestData.stopCount += 1;
-                document.getElementById('sim-status').innerText = "Trạng thái: Đã dừng giả lập (STOP). Tốc độ về 0.";
-                updateUI(latestData);
+function formatTime(seconds){
+
+    seconds =
+        Math.floor(Number(seconds) || 0);
+
+    const h =
+        Math.floor(seconds / 3600);
+
+    const m =
+        Math.floor((seconds % 3600) / 60);
+
+    const s =
+        seconds % 60;
+
+    return String(h).padStart(2,"0")
+        + ":"
+        + String(m).padStart(2,"0")
+        + ":"
+        + String(s).padStart(2,"0");
+}
+
+
+/* ==========================================================
+   SHIFT TIME
+   ========================================================== */
+
+function getShiftTime(shift){
+
+    if(shift === 1)
+        return "06:00 - 14:00";
+
+    if(shift === 2)
+        return "14:00 - 22:00";
+
+    return "22:00 - 06:00";
+}
+
+
+/* ==========================================================
+   UPDATE UI
+   ========================================================== */
+
+function updateUI(d){
+
+    latestData = {
+        ...latestData,
+        ...d
+    };
+
+
+    /* SPEED */
+
+    document.getElementById("speed")
+        .textContent =
+        Number(latestData.speed || 0)
+        .toFixed(0);
+
+
+    /* STATUS */
+
+    const status =
+        latestData.status === "RUN"
+            ? "RUN"
+            : "STOP";
+
+    const statusElement =
+        document.getElementById("machineStatus");
+
+    statusElement.textContent =
+        status;
+
+    statusElement.className =
+        "status " + status;
+
+
+    /* KPI */
+
+    document.getElementById("batch")
+        .textContent =
+        formatNumber(latestData.batch);
+
+    document.getElementById("day")
+        .textContent =
+        formatNumber(latestData.day);
+
+    document.getElementById("total")
+        .textContent =
+        formatNumber(latestData.total);
+
+
+    /* SHIFT */
+
+    const shift =
+        Number(latestData.shift || 1);
+
+    document.getElementById("currentShift")
+        .textContent =
+        latestData.shiftName ||
+        ("CA " + shift);
+
+    document.getElementById("shiftTime")
+        .textContent =
+        getShiftTime(shift);
+
+
+    /* TIME */
+
+    document.getElementById("runTime")
+        .textContent =
+        formatTime(latestData.runSec);
+
+    document.getElementById("stopTime")
+        .textContent =
+        formatTime(latestData.stopSec);
+
+    document.getElementById("stopCount")
+        .textContent =
+        latestData.stopCount || 0;
+
+
+    /* SHIFT PRODUCTION */
+
+    document.getElementById("shift1")
+        .textContent =
+        formatNumber(latestData.shift1) + " m";
+
+    document.getElementById("shift2")
+        .textContent =
+        formatNumber(latestData.shift2) + " m";
+
+    document.getElementById("shift3")
+        .textContent =
+        formatNumber(latestData.shift3) + " m";
+
+
+    /* STATISTICS */
+
+    document.getElementById("statShift1")
+        .textContent =
+        formatNumber(latestData.shift1);
+
+    document.getElementById("statShift2")
+        .textContent =
+        formatNumber(latestData.shift2);
+
+    document.getElementById("statShift3")
+        .textContent =
+        formatNumber(latestData.shift3);
+
+    document.getElementById("statTotal")
+        .textContent =
+        formatNumber(latestData.total);
+
+
+    /* TABLE CA 1 */
+
+    document.getElementById("tableShift1")
+        .textContent =
+        formatNumber(latestData.shift1)
+        + " m";
+
+    document.getElementById("tableRun1")
+        .textContent =
+        formatTime(latestData.shiftRun1);
+
+    document.getElementById("tableStop1")
+        .textContent =
+        formatTime(latestData.shiftStop1);
+
+    document.getElementById("tableStopCount1")
+        .textContent =
+        latestData.shiftStopCount1 || 0;
+
+
+    /* TABLE CA 2 */
+
+    document.getElementById("tableShift2")
+        .textContent =
+        formatNumber(latestData.shift2)
+        + " m";
+
+    document.getElementById("tableRun2")
+        .textContent =
+        formatTime(latestData.shiftRun2);
+
+    document.getElementById("tableStop2")
+        .textContent =
+        formatTime(latestData.shiftStop2);
+
+    document.getElementById("tableStopCount2")
+        .textContent =
+        latestData.shiftStopCount2 || 0;
+
+
+    /* TABLE CA 3 */
+
+    document.getElementById("tableShift3")
+        .textContent =
+        formatNumber(latestData.shift3)
+        + " m";
+
+    document.getElementById("tableRun3")
+        .textContent =
+        formatTime(latestData.shiftRun3);
+
+    document.getElementById("tableStop3")
+        .textContent =
+        formatTime(latestData.shiftStop3);
+
+    document.getElementById("tableStopCount3")
+        .textContent =
+        latestData.shiftStopCount3 || 0;
+
+
+    /* SYSTEM */
+
+    document.getElementById("device")
+        .textContent =
+        latestData.device || "METER-01";
+
+    document.getElementById("ip")
+        .textContent =
+        latestData.ip || "--";
+
+    document.getElementById("rssi")
+        .textContent =
+        latestData.rssi || "--";
+
+    document.getElementById("deviceTime")
+        .textContent =
+        latestData.time || "--";
+
+    document.getElementById("diameter")
+        .textContent =
+        latestData.diameter || 120;
+
+    document.getElementById("meterRev")
+        .textContent =
+        Number(
+            latestData.meterRev || 0
+        ).toFixed(6);
+
+
+    /* SETTINGS */
+
+    document.getElementById("settingDiameter")
+        .value =
+        latestData.diameter || 120;
+
+    document.getElementById("settingPulses")
+        .value =
+        latestData.pulses || 1;
+
+    document.getElementById("settingTimeout")
+        .value =
+        latestData.timeout || 5;
+
+}
+
+
+/* ==========================================================
+   MQTT STATUS
+   ========================================================== */
+
+function setMQTTStatus(connected){
+
+    const status =
+        document.getElementById(
+            "mqttStatus"
+        );
+
+    const dot =
+        document.getElementById(
+            "statusDot"
+        );
+
+    if(connected){
+
+        status.textContent =
+            "MQTT ONLINE";
+
+        status.className =
+            "mqtt-ok";
+
+        dot.classList.add(
+            "connected"
+        );
+
+    }
+    else{
+
+        status.textContent =
+            "MQTT OFFLINE";
+
+        status.className =
+            "mqtt-off";
+
+        dot.classList.remove(
+            "connected"
+        );
+
+    }
+
+}
+
+
+/* ==========================================================
+   TOAST
+   ========================================================== */
+
+function showToast(message){
+
+    const toast =
+        document.getElementById("toast");
+
+    toast.textContent =
+        message;
+
+    toast.style.display =
+        "block";
+
+    setTimeout(
+        ()=>{
+            toast.style.display =
+                "none";
+        },
+        2500
+    );
+
+}
+
+
+/* ==========================================================
+   MQTT CONNECT
+   ========================================================== */
+
+let client = null;
+
+function connectMQTT(){
+
+    console.log(
+        "Connecting MQTT..."
+    );
+
+    client =
+        mqtt.connect(
+            MQTT_URL,
+            {
+                clientId:
+                    "dashboard_" +
+                    Math.random()
+                        .toString(16)
+                        .substring(2),
+
+                clean:true,
+
+                connectTimeout:10000,
+
+                reconnectPeriod:5000,
+
+                keepalive:30
             }
+        );
 
-            if (client && client.connected) {
-                client.publish('factory/production/control', runState ? 'RUN' : 'STOP');
-            }
-        }
 
-        function saveSettings() {
-            let wifiSsid = document.getElementById('input-wifi-ssid').value;
-            let wifiPass = document.getElementById('input-wifi-pass').value;
-            let diameter = document.getElementById('input-diameter').value;
-            let pulses = document.getElementById('input-pulses').value;
-            let timeout = document.getElementById('input-timeout').value;
+    client.on(
+        "connect",
+        function(){
 
-            let configPayload = JSON.stringify({
-                ssid: wifiSsid,
-                pass: wifiPass,
-                diameter: parseFloat(diameter),
-                pulses: parseInt(pulses),
-                timeout: parseInt(timeout)
-            });
+            console.log(
+                "MQTT connected"
+            );
 
-            if (client && client.connected) {
-                client.publish('factory/production/config', configPayload);
-                alert("Đã gửi toàn bộ cấu hình (WiFi, Trục cuốn, Hệ số xung) xuống ESP32 thành công!");
-            } else {
-                alert("Đã lưu cài đặt trên Web! (MQTT Client chưa kết nối trực tiếp thiết bị)");
-            }
-        }
+            setMQTTStatus(true);
 
-        function syncToGoogleSheet() {
-            const scriptUrl = "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec";
+            client.subscribe(
+                TELEMETRY_TOPIC,
+                function(error){
 
-            let nowStr = new Date().toLocaleString();
-            let dataToSend = {
-                speed: latestData.speed,
-                batch: latestData.batch,
-                day: latestData.day,
-                total: latestData.total,
-                running: latestData.speed > 0,
-                timestamp: new Date().toISOString()
-            };
+                    if(error){
 
-            document.getElementById('cloud-status').innerText = "Trạng thái: Đang gửi dữ liệu lên Google Sheets...";
+                        console.error(
+                            error
+                        );
 
-            fetch(scriptUrl, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(dataToSend)
-            })
-            .then(() => {
-                alert("Đã đồng bộ dữ liệu thành công lên Google Sheets!");
-                document.getElementById('cloud-status').innerText = "Trạng thái: Đã đồng bộ Google Sheets thành công lúc " + nowStr;
-                
-                let tbody = document.getElementById('history-table-body');
-                if (tbody.rows.length === 1 && tbody.rows[0].cells.length === 1) {
-                    tbody.innerHTML = ""; 
-                }
-                let row = tbody.insertRow(0);
-                row.innerHTML = `<td>${nowStr}</td><td>CA ${latestData.shift}</td><td>${latestData.speed.toFixed(1)}</td><td>${latestData.batch.toFixed(1)}</td><td>${latestData.total.toFixed(1)}</td><td>${dataToSend.running ? 'RUN' : 'STOP'}</td>`;
-            })
-            .catch(err => {
-                alert("Lỗi đồng bộ: " + err);
-                document.getElementById('cloud-status').innerText = "Trạng thái: Lỗi đồng bộ Google Sheets!";
-            });
-        }
-
-        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
-
-        client.on('connect', function () {
-            document.getElementById('cloud-status').innerText = 'Trạng thái: Đã kết nối MQTT Cloud thành công!';
-            client.subscribe('factory/production/meter1');
-        });
-
-        client.on('message', function (topic, message) {
-            if (topic === 'factory/production/meter1') {
-                if (!isSimulating) {
-                    try {
-                        let d = JSON.parse(message.toString());
-                        updateUI(d);
-                    } catch(e) {
-                        console.log("Lỗi parse JSON", e);
                     }
+                    else{
+
+                        console.log(
+                            "Subscribed:",
+                            TELEMETRY_TOPIC
+                        );
+
+                    }
+
                 }
+            );
+
+            showToast(
+                "Đã kết nối MQTT"
+            );
+
+        }
+    );
+
+
+    client.on(
+        "message",
+        function(topic,message){
+
+            if(
+                topic !==
+                TELEMETRY_TOPIC
+            ){
+
+                return;
             }
-        });
-    </script>
+
+
+            try{
+
+                const data =
+                    JSON.parse(
+                        message.toString()
+                    );
+
+                console.log(
+                    "Telemetry:",
+                    data
+                );
+
+                updateUI(data);
+
+            }
+            catch(error){
+
+                console.error(
+                    "JSON error:",
+                    error
+                );
+
+            }
+
+        }
+    );
+
+
+    client.on(
+        "error",
+        function(error){
+
+            console.error(
+                "MQTT error:",
+                error
+            );
+
+        }
+    );
+
+
+    client.on(
+        "close",
+        function(){
+
+            setMQTTStatus(false);
+
+        }
+    );
+
+
+    client.on(
+        "offline",
+        function(){
+
+            setMQTTStatus(false);
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   SEND MQTT COMMAND
+   ========================================================== */
+
+function sendCommand(command){
+
+    if(
+        !client ||
+        !client.connected
+    ){
+
+        showToast(
+            "MQTT chưa kết nối"
+        );
+
+        return;
+    }
+
+
+    client.publish(
+        CONTROL_TOPIC,
+        command
+    );
+
+
+    console.log(
+        "Command:",
+        command
+    );
+
+
+    showToast(
+        "Đã gửi: " + command
+    );
+
+}
+
+
+/* ==========================================================
+   RESET BATCH
+   ========================================================== */
+
+function resetBatch(){
+
+    if(
+        !confirm(
+            "Reset sản lượng Batch?"
+        )
+    ){
+
+        return;
+    }
+
+    sendCommand(
+        "RESET_BATCH"
+    );
+
+}
+
+
+/* ==========================================================
+   RESET DAY
+   ========================================================== */
+
+function resetDay(){
+
+    if(
+        !confirm(
+            "Reset sản lượng ngày và dữ liệu các ca?"
+        )
+    ){
+
+        return;
+    }
+
+    sendCommand(
+        "RESET_DAY"
+    );
+
+}
+
+
+/* ==========================================================
+   RESET TOTAL
+   ========================================================== */
+
+function resetTotal(){
+
+    if(
+        !confirm(
+            "RESET TỔNG SẢN LƯỢNG? Hành động này không thể hoàn tác."
+        )
+    ){
+
+        return;
+    }
+
+    sendCommand(
+        "RESET_TOTAL"
+    );
+
+}
+
+
+/* ==========================================================
+   SAVE SETTINGS
+   ========================================================== */
+
+function saveSettings(){
+
+    if(
+        !client ||
+        !client.connected
+    ){
+
+        showToast(
+            "MQTT chưa kết nối"
+        );
+
+        return;
+    }
+
+
+    const diameter =
+        Number(
+            document.getElementById(
+                "settingDiameter"
+            ).value
+        );
+
+
+    const pulses =
+        Number(
+            document.getElementById(
+                "settingPulses"
+            ).value
+        );
+
+
+    const timeout =
+        Number(
+            document.getElementById(
+                "settingTimeout"
+            ).value
+        );
+
+
+    if(
+        diameter <= 0 ||
+        pulses <= 0 ||
+        timeout <= 0
+    ){
+
+        showToast(
+            "Thông số không hợp lệ"
+        );
+
+        return;
+    }
+
+
+    const config = {
+
+        diameter:diameter,
+
+        pulses:pulses,
+
+        timeout:timeout
+
+    };
+
+
+    client.publish(
+        CONFIG_TOPIC,
+        JSON.stringify(config)
+    );
+
+
+    showToast(
+        "Đã gửi cấu hình"
+    );
+
+
+    console.log(
+        "Config:",
+        config
+    );
+
+}
+
+
+/* ==========================================================
+   GOOGLE SHEETS
+   ========================================================== */
+
+async function syncToGoogleSheet(){
+
+    if(
+        !GOOGLE_SCRIPT_URL
+    ){
+
+        showToast(
+            "Chưa cấu hình Google Apps Script"
+        );
+
+        return;
+    }
+
+
+    const data = {
+
+        device:
+            latestData.device,
+
+        date:
+            getProductionDate(),
+
+        shift:
+            latestData.shiftName,
+
+        shiftTime:
+            getShiftTime(
+                Number(
+                    latestData.shift
+                )
+            ),
+
+        production:
+            latestData.shift === 1
+                ? latestData.shift1
+                : latestData.shift === 2
+                    ? latestData.shift2
+                    : latestData.shift3,
+
+        runSec:
+            latestData.shift === 1
+                ? latestData.shiftRun1
+                : latestData.shift === 2
+                    ? latestData.shiftRun2
+                    : latestData.shiftRun3,
+
+        stopSec:
+            latestData.shift === 1
+                ? latestData.shiftStop1
+                : latestData.shift === 2
+                    ? latestData.shiftStop2
+                    : latestData.shiftStop3,
+
+        stopCount:
+            latestData.shift === 1
+                ? latestData.shiftStopCount1
+                : latestData.shift === 2
+                    ? latestData.shiftStopCount2
+                    : latestData.shiftStopCount3,
+
+        total:
+            latestData.total,
+
+        timestamp:
+            latestData.time
+
+    };
+
+
+    try{
+
+        await fetch(
+            GOOGLE_SCRIPT_URL,
+            {
+                method:"POST",
+
+                mode:"no-cors",
+
+                headers:{
+                    "Content-Type":
+                        "text/plain;charset=utf-8"
+                },
+
+                body:
+                    JSON.stringify(data)
+            }
+        );
+
+
+        showToast(
+            "Đã gửi dữ liệu Google Sheets"
+        );
+
+    }
+    catch(error){
+
+        console.error(
+            error
+        );
+
+        showToast(
+            "Lỗi gửi Google Sheets"
+        );
+
+    }
+
+}
+
+
+/* ==========================================================
+   PRODUCTION DATE
+   ========================================================== */
+
+function getProductionDate(){
+
+    const now =
+        new Date();
+
+    if(
+        now.getHours() < 6
+    ){
+
+        now.setDate(
+            now.getDate() - 1
+        );
+
+    }
+
+    const y =
+        now.getFullYear();
+
+    const m =
+        String(
+            now.getMonth()+1
+        ).padStart(2,"0");
+
+    const d =
+        String(
+            now.getDate()
+        ).padStart(2,"0");
+
+    return `${y}-${m}-${d}`;
+
+}
+
+
+/* ==========================================================
+   INIT
+   ========================================================== */
+
+window.addEventListener(
+    "load",
+    function(){
+
+        console.log(
+            "METER-01 Dashboard"
+        );
+
+        connectMQTT();
+
+    }
+);
+
+</script>
+
 </body>
 </html>
