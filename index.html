@@ -231,11 +231,7 @@
         }
 
         function syncToGoogleSheet() {
-            const scriptUrl = "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec"; // Thay link Web App của bạn vào đây
-            if (scriptUrl === "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec") {
-                alert("Dữ liệu hiện tại:\nTốc độ: " + latestData.speed.toFixed(1) + " m/min\nBatch: " + latestData.batch.toFixed(1) + " m\nTổng: " + latestData.total.toFixed(1) + " m\n\n(Chưa cấu hình URL Google Apps Script Web App!)");
-                return;
-            }
+            const scriptUrl = "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec";
 
             let nowStr = new Date().toLocaleString();
             let dataToSend = {
@@ -247,6 +243,9 @@
                 timestamp: new Date().toISOString()
             };
 
+            // Đổi trạng thái hiển thị tạm thời
+            document.getElementById('cloud-status').innerText = "Trạng thái: Đang gửi dữ liệu lên Google Sheets...";
+
             fetch(scriptUrl, {
                 method: "POST",
                 mode: "no-cors",
@@ -255,6 +254,7 @@
             })
             .then(() => {
                 alert("Đã đồng bộ dữ liệu thành công lên Google Sheets!");
+                document.getElementById('cloud-status').innerText = "Trạng thái: Đã đồng bộ Google Sheets thành công lúc " + nowStr;
                 
                 let tbody = document.getElementById('history-table-body');
                 if (tbody.rows.length === 1 && tbody.rows[0].cells.length === 1) {
@@ -265,6 +265,7 @@
             })
             .catch(err => {
                 alert("Lỗi đồng bộ: " + err);
+                document.getElementById('cloud-status').innerText = "Trạng thái: Lỗi đồng bộ Google Sheets!";
             });
         }
 
