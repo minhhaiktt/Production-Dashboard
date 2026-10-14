@@ -26,10 +26,11 @@
         .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; }
         .status-run { background: #dcfce7; color: var(--success); }
         .status-stop { background: #fee2e2; color: var(--danger); }
-        .btn { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 11px 18px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn { background: var(--primary); color: white; border: none; border-radius: 8px; padding: 11px 18px; font-size: 15px; font-weight: bold; cursor: pointer; width: 100%; transition: opacity 0.2s; }
         .btn:hover { opacity: 0.9; }
         .btn-success { background: var(--success); }
         .btn-danger { background: var(--danger); }
+        .btn-warning { background: var(--warning); margin-top: 10px; }
         .cloud-bar { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 30px; padding: 10px; }
     </style>
 </head>
@@ -37,7 +38,7 @@
     <div class="header">
         <div>
             <div class="title">PRODUCTION METER</div>
-            <div class="subtitle">Giám sát đám mây thời gian thực</div>
+            <div class="subtitle">Hệ thống giám sát sản xuất & Google Sheets Integration</div>
         </div>
         <div>
             <div id="device-wifi-badge" class="status-badge" style="background: #fee2e2; color: #dc2626;">ESP32: MẤT KẾT NỐI</div>
@@ -45,13 +46,14 @@
     </div>
 
     <div class="container">
-        <!-- ĐIỀU KHIỂN PHẦN CỨNG TỪ XA -->
+        <!-- ĐIỀU KHIỂN PHẦN CỨNG & GOOGLE SHEETS SYNC -->
         <div class="card" style="background: #f0fdf4; border: 1px solid #bbf7d0; margin-bottom: 20px;">
-            <div class="card-title" style="color: #15803d;">Điều khiển phần cứng ESP32 từ xa qua Cloud</div>
+            <div class="card-title" style="color: #15803d;">Điều khiển phần cứng ESP32 & Đồng bộ Google Sheets</div>
             <div style="display: flex; gap: 10px; margin-top: 10px;">
                 <button class="btn btn-success" onclick="sendLedCommand('LED_ON')">BẬT ĐÈN LED ESP32</button>
                 <button class="btn btn-danger" onclick="sendLedCommand('LED_OFF')">TẮT ĐÈN LED ESP32</button>
             </div>
+            <button class="btn btn-warning" onclick="syncToGoogleSheet()">ĐỒNG BỘ DỮ LIỆU LÊN GOOGLE SHEETS NGAY</button>
         </div>
 
         <div class="grid">
@@ -80,6 +82,7 @@
         let latestData = { speed: 0, batch: 0, day: 0, total: 0, wifi: false };
 
         function updateUI(d) {
+            latestData = d;
             document.getElementById('speed').textContent = (d.speed || 0).toFixed(1);
             document.getElementById('batch').textContent = (d.batch || 0).toFixed(1);
             document.getElementById('day-m').textContent = (d.day || 0).toFixed(1);
@@ -106,7 +109,38 @@
             }
         }
 
-        // Kết nối MQTT Cloud qua WebSocket bảo mật (wss)
+        function syncToGoogleSheet() {
+            // Thay đường dẫn Web App của Google Apps Script của bạn vào đây nếu có
+            const scriptUrl = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL"; 
+            
+            if (scriptUrl === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
+                alert("Dữ liệu hiện tại:\nTốc độ: " + latestData.speed + " m/min\nBatch: " + latestData.batch + " m\nTổng: " + latestData.total + " m\n\n(Chưa cấu hình URL Google Apps Script Web App, hãy thay link vào code để đẩy dữ liệu trực tiếp vào Sheet!)");
+                return;
+            }
+
+            let dataToSend = {
+                speed: latestData.speed,
+                batch: latestData.batch,
+                day: latestData.day,
+                total: latestData.total,
+                timestamp: new Date().toISOString()
+            };
+
+            fetch(scriptUrl, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(dataToSend)
+            })
+            .then(() => {
+                alert("Đã gửi dữ liệu thành công lên Google Sheets!");
+            })
+            .catch(err => {
+                alert("Lỗi khi đồng bộ Google Sheets: " + err);
+            });
+        }
+
+        // Kết nối MQTT Cloud qua WebSocket bảo mật (wss) chuẩn cổng 8884 của HiveMQ
         const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
 
         client.on('connect', function () {
