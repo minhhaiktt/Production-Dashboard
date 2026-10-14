@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production Meter - Advanced Dashboard</title>
+    <title>Production Meter - Simulation Dashboard</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root {
@@ -53,10 +53,10 @@
     <div class="header">
         <div>
             <div class="title">PRODUCTION METER</div>
-            <div class="subtitle">Hệ thống giám sát sản xuất & Lưu trữ Google Sheets</div>
+            <div class="subtitle">Giám sát & Lưu trữ Google Sheets</div>
         </div>
         <div>
-            <div id="device-wifi-badge" class="status-badge" style="background: #fef08a; color: #854d0e;">CHỜ KẾT NỐI</div>
+            <div id="device-wifi-badge" class="status-badge" style="background: #dcfce7; color: #16a34a;">WEB: SẴN SÀNG (SIMULATION)</div>
         </div>
     </div>
 
@@ -70,12 +70,13 @@
     <!-- TAB 1: TỔNG QUAN -->
     <div id="tab-0" class="tab-content active">
         <div class="card" style="background: #fefce8; border: 1px solid #fde047;">
-            <div class="card-title" style="color: #a16207;">ĐIỀU KHIỂN & ĐỒNG BỘ GOOGLE SHEETS</div>
+            <div class="card-title" style="color: #a16207;">BẢNG ĐIỀU KHIỂN & GIẢ LẬP OFFLINE (TEST NHANH)</div>
             <div style="display: flex; gap: 10px;">
-                <button class="btn btn-success" onclick="sendLedCommand('LED_ON')">BẬT ĐÈN LED ESP32</button>
-                <button class="btn btn-danger" onclick="sendLedCommand('LED_OFF')">TẮT ĐÈN LED ESP32</button>
+                <button class="btn btn-success" onclick="setSimulation(true)">▶ CHẠY (RUN)</button>
+                <button class="btn btn-danger" onclick="setSimulation(false)">■ DỪNG (STOP)</button>
             </div>
             <button class="btn" style="background: #16a34a;" onclick="syncToGoogleSheet()">GHI DỮ LIỆU LÊN GOOGLE SHEET</button>
+            <div id="sim-status" style="font-size: 12px; color: #854d0e; margin-top: 8px;">Trạng thái: Đang dừng giả lập. Bấm Chạy để test số liệu.</div>
         </div>
 
         <div class="grid" style="margin-top: 15px;">
@@ -152,10 +153,12 @@
         </div>
     </div>
 
-    <div class="cloud-bar" id="cloud-status">Trạng thái: Đang kết nối MQTT Cloud...</div>
+    <div class="cloud-bar" id="cloud-status">Trạng thái: Hoạt động ở chế độ kết hợp MQTT & Giả lập web.</div>
 
     <script>
-        let latestData = { speed: 0, batch: 0, day: 0, total: 0, runSec: 0, stopSec: 0, stopCount: 0, shift: 1, wifi: false };
+        let latestData = { speed: 0, batch: 0, day: 0, total: 1250.0, runSec: 0, stopSec: 0, stopCount: 0, shift: 1, wifi: true };
+        let isSimulating = false;
+        let simInterval = null;
 
         function switchTab(index) {
             let tabs = document.querySelectorAll('.tab-btn');
@@ -184,25 +187,34 @@
             document.getElementById('stop-sec').textContent = formatTime(d.stopSec);
             document.getElementById('stop-count').textContent = d.stopCount || 0;
             document.getElementById('shift-val').textContent = "CA " + (d.shift || 1);
-
-            let wifiBadge = document.getElementById('device-wifi-badge');
-            if (d.wifi) {
-                wifiBadge.textContent = "ESP32: ĐÃ KẾT NỐI MẠNG";
-                wifiBadge.style.background = "#dcfce7";
-                wifiBadge.style.color = "#16a34a";
-            } else {
-                wifiBadge.textContent = "ESP32: MẤT KẾT NỐI MẠNG";
-                wifiBadge.style.background = "#fee2e2";
-                wifiBadge.style.color = "#dc2626";
-            }
         }
 
-        function sendLedCommand(cmd) {
-            if (client) {
-                client.publish('factory/production/control', cmd);
-                document.getElementById('cloud-status').innerText = "Đã gửi lệnh [" + cmd + "] tới ESP32 thành công!";
+        // Bật/Tắt chế độ giả lập trực quan trên web
+        function setSimulation(runState) {
+            isSimulating = runState;
+            if (isSimulating) {
+                document.getElementById('sim-status').innerText = "Trạng thái: Đang chạy giả lập (RUN). Số liệu đang tăng dần...";
+                if (simInterval) clearInterval(simInterval);
+                simInterval = setInterval(() => {
+                    latestData.speed = 15.5; // Tốc độ giả lập m/min
+                    latestData.batch += 0.5;
+                    latestData.day += 0.5;
+                    latestData.total += 0.5;
+                    latestData.runSec += 1;
+                    updateUI(latestData);
+                }, 1000);
             } else {
-                alert("MQTT Client chưa sẵn sàng!");
+                if (simInterval) clearInterval(simInterval);
+                latestData.speed = 0.0;
+                latestData.stopSec += 1;
+                latestData.stopCount += 1;
+                document.getElementById('sim-status').innerText = "Trạng thái: Đã dừng giả lập (STOP). Tốc độ về 0.";
+                updateUI(latestData);
+            }
+
+            // Gửi lệnh qua MQTT nếu phần cứng đang cắm
+            if (client && client.connected) {
+                client.publish('factory/production/control', runState ? 'RUN' : 'STOP');
             }
         }
 
@@ -210,18 +222,18 @@
             let diameter = document.getElementById('input-diameter').value;
             let timeout = document.getElementById('input-timeout').value;
             let payload = JSON.stringify({ diameter: diameter, timeout: timeout });
-            if (client) {
+            if (client && client.connected) {
                 client.publish('factory/production/config', payload);
                 alert("Đã gửi cấu hình mới xuống ESP32 thành công!");
             } else {
-                alert("MQTT Client chưa kết nối!");
+                alert("Đã lưu cấu hình giả lập trên Web!");
             }
         }
 
         function syncToGoogleSheet() {
-            const scriptUrl = "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec"; // Thay link Web App của bạn vào đây
-            if (scriptUrl === "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec") {
-                alert("Chưa cấu hình URL Google Apps Script Web App! Hãy thay link vào code.");
+            const scriptUrl = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL"; // Thay link Web App của bạn vào đây
+            if (scriptUrl === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
+                alert("Dữ liệu hiện tại:\nTốc độ: " + latestData.speed.toFixed(1) + " m/min\nBatch: " + latestData.batch.toFixed(1) + " m\nTổng: " + latestData.total.toFixed(1) + " m\n\n(Chưa cấu hình URL Google Apps Script Web App!)");
                 return;
             }
 
@@ -244,10 +256,9 @@
             .then(() => {
                 alert("Đã đồng bộ dữ liệu thành công lên Google Sheets!");
                 
-                // Thêm vào bảng lịch sử ở Tab Thống Kê
                 let tbody = document.getElementById('history-table-body');
                 if (tbody.rows.length === 1 && tbody.rows[0].cells.length === 1) {
-                    tbody.innerHTML = ""; // Xóa dòng trống ban đầu
+                    tbody.innerHTML = ""; 
                 }
                 let row = tbody.insertRow(0);
                 row.innerHTML = `<td>${nowStr}</td><td>CA ${latestData.shift}</td><td>${latestData.speed.toFixed(1)}</td><td>${latestData.batch.toFixed(1)}</td><td>${latestData.total.toFixed(1)}</td><td>${dataToSend.running ? 'RUN' : 'STOP'}</td>`;
@@ -257,21 +268,23 @@
             });
         }
 
-        // Kết nối MQTT qua WebSocket chuẩn cổng 8884
+        // Vẫn duy trì kết nối MQTT Cloud nếu thiết bị thật online
         const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
 
         client.on('connect', function () {
-            document.getElementById('cloud-status').innerText = 'Trạng thái: Đã kết nối MQTT Cloud thành công!';
+            document.getElementById('cloud-status').innerText = 'Trạng thái: Đã kết nối MQTT Cloud (Có thể nhận dữ liệu từ ESP32 thật hoặc dùng nút giả lập phía trên).';
             client.subscribe('factory/production/meter1');
         });
 
         client.on('message', function (topic, message) {
             if (topic === 'factory/production/meter1') {
-                try {
-                    let d = JSON.parse(message.toString());
-                    updateUI(d);
-                } catch(e) {
-                    console.log("Lỗi parse JSON", e);
+                if (!isSimulating) { // Nếu không bật giả lập web thì lấy dữ liệu thực từ phần cứng gửi lên
+                    try {
+                        let d = JSON.parse(message.toString());
+                        updateUI(d);
+                    } catch(e) {
+                        console.log("Lỗi parse JSON", e);
+                    }
                 }
             }
         });
