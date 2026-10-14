@@ -231,8 +231,8 @@
         }
 
         function syncToGoogleSheet() {
-            const scriptUrl = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL"; // Thay link Web App của bạn vào đây
-            if (scriptUrl === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
+            const scriptUrl = "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec"; // Thay link Web App của bạn vào đây
+            if (scriptUrl === "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec") {
                 alert("Dữ liệu hiện tại:\nTốc độ: " + latestData.speed.toFixed(1) + " m/min\nBatch: " + latestData.batch.toFixed(1) + " m\nTổng: " + latestData.total.toFixed(1) + " m\n\n(Chưa cấu hình URL Google Apps Script Web App!)");
                 return;
             }
