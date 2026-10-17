@@ -4,153 +4,394 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>METER-01 - Production Dashboard</title>
+<!-- MQTT.js library over WebSockets -->
 <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
 <style>
-* { box-sizing: border-box; }
-html, body { 
-    height: 100vh; 
-    margin: 0; 
-    font-family: Arial, Helvetica, sans-serif; 
-    background: #121820; 
-    color: #e5e7eb; 
-    overflow: hidden; /* Mặc định khóa cuộn trên PC/TV */
+/* Reset & Root CSS Variables for High-DPI Fluid Scaling */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
-/* Đổi sang chế độ cuộn tự do khi xem trên điện thoại */
-@media(max-width: 900px){
-    html, body { overflow-y: auto; height: auto; }
+:root {
+    --bg-dark: #121820;
+    --card-bg: #1f2937;
+    --border-color: #374151;
+    --text-main: #f3f4f6;
+    --text-sub: #9ca3af;
+    --accent-blue: #3b82f6;
+    --accent-green: #2ecc71;
+    --accent-red: #e74c3c;
+    --accent-purple: #a855f7;
+    --accent-amber: #d97706;
+
+    /* Fluid scaling base font size calculated via Viewport Width (vw) */
+    font-size: clamp(14px, 0.95vw, 22px);
 }
 
-.header { 
-    height: 60px;
-    background: #1f2937; 
-    color: white; 
-    padding: 0 25px; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    border-bottom: 1px solid #374151; 
-}
-.title { font-size: 22px; font-weight: bold; }
-.subtitle { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-.connection { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.status-dot { width: 11px; height: 11px; border-radius: 50%; background: #e74c3c; }
-.status-dot.connected { background: #2ecc71; }
-
-.nav { 
-    height: 45px;
-    background: #1f2937; 
-    display: flex; 
-    border-bottom: 1px solid #374151; 
-}
-.nav button { flex: 1; padding: 0; border: 0; background: #1f2937; color: #9ca3af; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
-.nav button.active { color: #3b82f6; border-bottom: 3px solid #3b82f6; background: #121820; }
-
-.container { 
-    width: 100%; 
-    height: calc(100vh - 105px); 
-    padding: 15px 25px; 
+body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Header Component */
+.header {
+    background: var(--card-bg);
+    padding: clamp(0.75rem, 1.2vw, 1.75rem) clamp(1rem, 2vw, 3rem);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header .title {
+    font-size: clamp(1.2rem, 1.6vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.header .subtitle {
+    font-size: clamp(0.75rem, 0.85vw, 1.2rem);
+    color: var(--text-sub);
+    margin-top: 0.2rem;
+}
+
+.connection {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: clamp(0.85rem, 1vw, 1.3rem);
+    font-weight: 600;
+}
+
+.status-dot {
+    width: clamp(10px, 0.8vw, 16px);
+    height: clamp(10px, 0.8vw, 16px);
+    border-radius: 50%;
+    background-color: var(--accent-red);
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.6);
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.status-dot.connected {
+    background-color: var(--accent-green);
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
+}
+
+/* Tab Navigation */
+.nav {
+    background: var(--card-bg);
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav button {
+    flex: 1;
+    padding: clamp(0.6rem, 1vw, 1.4rem);
+    border: none;
+    background: var(--card-bg);
+    color: var(--text-sub);
+    font-weight: 700;
+    font-size: clamp(0.9rem, 1.1vw, 1.5rem);
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.nav button.active {
+    color: var(--accent-blue);
+    border-bottom: 4px solid var(--accent-blue);
+    background: var(--bg-dark);
+}
+
+/* Main App Layout */
+.container {
+    width: 100%;
+    max-width: 1920px;
+    margin: 0 auto;
+    padding: clamp(1rem, 1.8vw, 3rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1rem, 1.5vw, 2.5rem);
+    flex: 1;
+}
+
+.page {
+    display: none;
+    flex-direction: column;
+    gap: clamp(1rem, 1.5vw, 2.5rem);
+}
+
+.page.active {
+    display: flex;
+}
+
+/* Responsive Grid for Dashboard */
+.main-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
+    gap: clamp(1rem, 1.5vw, 2.5rem);
+    align-items: stretch;
+}
+
+/* Cards Base */
+.card {
+    background: var(--card-bg);
+    border-radius: clamp(8px, 0.8vw, 16px);
+    padding: clamp(1rem, 1.5vw, 2.5rem);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    border: 1px solid var(--border-color);
+}
+
+.card-title {
+    font-size: clamp(1.05rem, 1.25vw, 1.8rem);
+    font-weight: 700;
+    margin-bottom: clamp(0.8rem, 1.2vw, 2rem);
+    color: var(--text-main);
+}
+
+/* Left Speed Box Card */
+.speed-box {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: var(--card-bg);
+    border-radius: clamp(8px, 0.8vw, 16px);
+    padding: clamp(2rem, 3vw, 4.5rem) clamp(1rem, 1.5vw, 2.5rem);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    border: 1px solid var(--border-color);
+    min-height: clamp(280px, 22vw, 550px);
+}
+
+.shift-badge {
+    position: absolute;
+    top: clamp(0.8rem, 1.2vw, 2rem);
+    left: clamp(1rem, 1.5vw, 2.5rem);
+    text-align: left;
+}
+
+.shift-badge .shift-name {
+    font-size: clamp(1.1rem, 1.4vw, 2.2rem);
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.shift-badge .shift-time {
+    font-size: clamp(0.75rem, 0.9vw, 1.3rem);
+    color: var(--text-sub);
+    margin-top: 0.2rem;
+}
+
+.speed-label-top {
+    font-size: clamp(0.95rem, 1.1vw, 1.6rem);
+    font-weight: 700;
+    color: var(--text-sub);
+    margin-top: clamp(1rem, 1.5vw, 2.5rem);
+    letter-spacing: 1px;
+}
+
+.speed-value {
+    font-size: clamp(4rem, 6.5vw, 10rem);
+    font-weight: 900;
+    color: var(--accent-blue);
+    line-height: 1;
+    margin: clamp(0.3rem, 0.8vw, 1.5rem) 0;
+}
+
+.speed-unit {
+    font-size: clamp(1rem, 1.3vw, 1.8rem);
+    color: var(--text-sub);
+    font-weight: 700;
+}
+
+.status {
+    display: inline-block;
+    padding: clamp(0.3rem, 0.5vw, 0.8rem) clamp(1rem, 1.5vw, 2.5rem);
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: clamp(0.85rem, 1.05vw, 1.5rem);
+    margin-top: clamp(0.6rem, 1vw, 1.5rem);
+}
+
+.status.RUN {
+    background: rgba(46, 204, 113, 0.15);
+    color: var(--accent-green);
+    border: 2px solid var(--accent-green);
+}
+
+.status.STOP {
+    background: rgba(231, 76, 60, 0.15);
+    color: var(--accent-red);
+    border: 2px solid var(--accent-red);
+}
+
+/* Right Stacked Production Cards */
+.right-stack {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.75rem, 1.2vw, 1.8rem);
     justify-content: space-between;
 }
-@media(max-width: 900px){
-    .container { height: auto; padding: 15px; }
+
+.stat-row {
+    flex: 1;
+    background: var(--card-bg);
+    border-radius: clamp(8px, 0.8vw, 16px);
+    padding: clamp(1rem, 1.6vw, 2.5rem) clamp(1.2rem, 1.8vw, 2.8rem);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    border-left: clamp(5px, 0.5vw, 10px) solid var(--accent-blue);
+    border-top: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
-.page { display: none; height: 100%; flex-direction: column; }
-.page.active { display: flex; }
-@media(max-width: 900px){
-    .page.active { display: block; height: auto; }
+.stat-label {
+    font-size: clamp(0.95rem, 1.2vw, 1.8rem);
+    font-weight: 700;
+    color: var(--text-sub);
+    letter-spacing: 0.5px;
 }
 
-.card { 
-    background: #1f2937; 
-    border-radius: 10px; 
-    padding: 15px 20px; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
-    border: 1px solid #374151; 
-}
-.card-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #f3f4f6; }
-
-.main-layout { 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    gap: 15px; 
-    flex: 1; 
-    min-height: 0;
-    margin-bottom: 15px;
-}
-@media(max-width: 900px){ 
-    .main-layout { grid-template-columns: 1fr; margin-bottom: 15px; } 
+.stat-val-wrap {
+    text-align: right;
 }
 
-.speed-box { 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center; 
-    align-items: center; 
-    text-align: center; 
-    background: #1f2937; 
-    border-radius: 10px; 
-    padding: 20px; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
-    border: 1px solid #374151; 
-    height: 100%; 
+.stat-value {
+    font-size: clamp(1.6rem, 2.4vw, 3.8rem);
+    font-weight: 800;
+    color: var(--text-main);
 }
-@media(max-width: 900px){ .speed-box { min-height: 200px; } }
 
-.speed-value { font-size: 72px; font-weight: bold; color: #3b82f6; margin: 10px 0; }
-.speed-unit { font-size: 18px; color: #9ca3af; }
-.status { display: inline-block; padding: 5px 16px; border-radius: 30px; font-weight: bold; font-size: 14px; margin-top: 8px; }
-.status.RUN { background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; }
-.status.STOP { background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c; }
-
-.right-stack { display: flex; flex-direction: column; gap: 10px; height: 100%; }
-.stat-row { 
-    flex: 1; 
-    background: #1f2937; 
-    border-radius: 8px; 
-    padding: 0 20px; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2); 
-    border-left: 5px solid #3b82f6; 
-    border-top: 1px solid #374151; 
-    border-right: 1px solid #374151; 
-    border-bottom: 1px solid #374151; 
+.stat-unit {
+    font-size: clamp(0.8rem, 1vw, 1.4rem);
+    color: var(--text-sub);
+    font-weight: 700;
+    margin-left: 0.3rem;
 }
-@media(max-width: 900px){ .stat-row { padding: 12px 15px; } }
 
-.stat-label { font-size: 14px; font-weight: bold; color: #9ca3af; }
-.stat-val-wrap { text-align: right; }
-.stat-value { font-size: 22px; font-weight: bold; color: #f3f4f6; }
-.stat-unit { font-size: 12px; color: #9ca3af; }
+/* Data Table Component */
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 8px;
+}
 
-.table-wrap { overflow-x: auto; flex: 1; }
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 10px 15px; border-bottom: 1px solid #374151; text-align: left; white-space: nowrap; color: #d1d5db; font-size: 14px; }
-th { background: #111827; color: #9ca3af; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
 
-button.action { border: 0; border-radius: 7px; padding: 10px 18px; cursor: pointer; font-weight: bold; font-size: 14px; margin-right: 8px; margin-bottom: 8px; transition: opacity 0.2s; }
-button.action:hover { opacity: 0.85; }
-.btn-blue { background: #3b82f6; color: white; }
-.btn-orange { background: #d97706; color: white; }
-.btn-danger { background: #dc2626; color: white; }
+th, td {
+    padding: clamp(0.7rem, 1vw, 1.5rem) clamp(0.8rem, 1.2vw, 1.8rem);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+}
 
-.form-row { display: grid; grid-template-columns: 200px 1fr; align-items: center; margin-bottom: 12px; gap: 15px; }
-@media(max-width: 900px){ .form-row { grid-template-columns: 1fr; gap: 5px; } }
-.form-row label { font-weight: bold; color: #d1d5db; font-size: 14px; }
-input { width: 100%; padding: 9px; background: #111827; border: 1px solid #374151; color: white; border-radius: 6px; font-size: 14px; }
-input:focus { border-color: #3b82f6; outline: none; }
-.mqtt-ok { color: #2ecc71; font-weight: bold; }
-.mqtt-off { color: #e74c3c; font-weight: bold; }
-.toast { position: fixed; right: 20px; bottom: 20px; background: #374151; color: white; padding: 12px 18px; border-radius: 7px; display: none; z-index: 9999; border: 1px solid #4b5563; font-size: 14px; }
+th {
+    background-color: #111827;
+    color: var(--text-sub);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Action Buttons & Forms */
+button.action {
+    border: none;
+    border-radius: clamp(6px, 0.5vw, 12px);
+    padding: clamp(0.6rem, 0.9vw, 1.4rem) clamp(1rem, 1.5vw, 2.2rem);
+    cursor: pointer;
+    font-weight: 700;
+    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    margin-right: 0.6rem;
+    margin-bottom: 0.6rem;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+button.action:active {
+    transform: scale(0.98);
+}
+
+button.action:hover {
+    opacity: 0.9;
+}
+
+.btn-blue { background: var(--accent-blue); color: #ffffff; }
+.btn-orange { background: var(--accent-amber); color: #ffffff; }
+.btn-danger { background: var(--accent-red); color: #ffffff; }
+
+.form-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 220px) 1fr;
+    align-items: center;
+    margin-bottom: clamp(0.8rem, 1.2vw, 1.8rem);
+    gap: clamp(0.8rem, 1.2vw, 1.8rem);
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+    }
+}
+
+.form-row label {
+    font-weight: 700;
+    color: var(--text-main);
+    font-size: clamp(0.85rem, 1vw, 1.3rem);
+}
+
+input {
+    width: 100%;
+    padding: clamp(0.5rem, 0.8vw, 1.2rem);
+    background: #111827;
+    border: 1px solid var(--border-color);
+    color: #ffffff;
+    border-radius: clamp(4px, 0.4vw, 8px);
+    font-size: clamp(0.85rem, 1vw, 1.3rem);
+}
+
+input:focus {
+    border-color: var(--accent-blue);
+    outline: none;
+}
+
+.mqtt-ok { color: var(--accent-green); font-weight: 700; }
+.mqtt-off { color: var(--accent-red); font-weight: 700; }
+
+/* Notification Toast */
+.toast {
+    position: fixed;
+    right: clamp(15px, 2vw, 40px);
+    bottom: clamp(15px, 2vw, 40px);
+    background: var(--card-bg);
+    color: var(--text-main);
+    padding: clamp(0.8rem, 1.2vw, 1.8rem) clamp(1.2rem, 1.6vw, 2.5rem);
+    border-radius: clamp(6px, 0.6vw, 12px);
+    display: none;
+    z-index: 9999;
+    border: 1px solid var(--border-color);
+    font-size: clamp(0.85rem, 1vw, 1.3rem);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
 </style>
 </head>
 <body>
 
+<!-- Header Top Navigation -->
 <div class="header">
     <div>
         <div class="title">PRODUCTION METER</div>
@@ -158,96 +399,137 @@ input:focus { border-color: #3b82f6; outline: none; }
     </div>
     <div class="connection">
         <span id="statusDot" class="status-dot"></span>
-        <span id="mqttStatus">MQTT OFFLINE</span>
+        <span id="mqttStatus" class="mqtt-off">MQTT OFFLINE</span>
     </div>
 </div>
 
+<!-- Tab Header Bar -->
 <div class="nav">
     <button id="nav0" class="active" onclick="switchTab(0)">TỔNG QUAN</button>
     <button id="nav1" onclick="checkPasswordAndSwitch()">CÀI ĐẶT</button>
 </div>
 
+<!-- Main Body Container -->
 <div class="container">
 
-<!-- PAGE 0 - TỔNG QUAN -->
-<div id="page0" class="page active">
-    <div class="main-layout">
-        <div class="speed-box">
-            <div style="font-size: 15px; font-weight: bold; color: #9ca3af;">TỐC ĐỘ HIỆN TẠI</div>
-            <div id="speed" class="speed-value">0</div>
-            <div class="speed-unit">m/min</div>
-            <span id="machineStatus" class="status STOP">STOP</span>
+    <!-- PAGE 0: TỔNG QUAN DASHBOARD -->
+    <div id="page0" class="page active">
+        <div class="main-layout">
+            <!-- Left Card: Current Speed & Shift Badge -->
+            <div class="speed-box">
+                <div class="shift-badge">
+                    <div id="currentShift" class="shift-name">CA 1</div>
+                    <div id="shiftTime" class="shift-time">06:00 - 14:00</div>
+                </div>
+                <div class="speed-label-top">TỐC ĐỘ HIỆN TẠI</div>
+                <div id="speed" class="speed-value">0</div>
+                <div class="speed-unit">m/min</div>
+                <span id="machineStatus" class="status STOP">STOP</span>
+            </div>
+
+            <!-- Right Column: 3 Balanced Metric Cards -->
+            <div class="right-stack">
+                <div class="stat-row" style="border-left-color: var(--accent-blue);">
+                    <div class="stat-label">SẢN LƯỢNG CA</div>
+                    <div class="stat-val-wrap">
+                        <span id="batch" class="stat-value">0,0</span>
+                        <span class="stat-unit">mét</span>
+                    </div>
+                </div>
+                <div class="stat-row" style="border-left-color: var(--accent-green);">
+                    <div class="stat-label">SẢN LƯỢNG NGÀY</div>
+                    <div class="stat-val-wrap">
+                        <span id="day" class="stat-value">0,0</span>
+                        <span class="stat-unit">mét</span>
+                    </div>
+                </div>
+                <div class="stat-row" style="border-left-color: var(--accent-purple);">
+                    <div class="stat-label">TỔNG SẢN LƯỢNG</div>
+                    <div class="stat-val-wrap">
+                        <span id="total" class="stat-value">0,0</span>
+                        <span class="stat-unit">mét</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="right-stack">
-            <div class="stat-row">
-                <div class="stat-label">SẢN LƯỢNG CA</div>
-                <div class="stat-val-wrap">
-                    <span id="batch" class="stat-value">0.0</span> <span class="stat-unit">mét</span>
-                </div>
-            </div>
-            <div class="stat-row" style="border-left-color: #2ecc71;">
-                <div class="stat-label">SẢN LƯỢNG NGÀY</div>
-                <div class="stat-val-wrap">
-                    <span id="day" class="stat-value">0.0</span> <span class="stat-unit">mét</span>
-                </div>
-            </div>
-            <div class="stat-row" style="border-left-color: #a855f7;">
-                <div class="stat-label">TỔNG SẢN LƯỢNG</div>
-                <div class="stat-val-wrap">
-                    <span id="total" class="stat-value">0.0</span> <span class="stat-unit">mét</span>
-                </div>
-            </div>
-            <div class="stat-row" style="border-left-color: #f59e0b;">
-                <div class="stat-label">CA HIỆN TẠI</div>
-                <div class="stat-val-wrap">
-                    <span id="currentShift" class="stat-value" style="font-size: 18px;">CA 1</span>
-                    <div id="shiftTime" class="stat-unit">06:00 - 14:00</div>
-                </div>
+        <!-- Shift Details Table -->
+        <div class="card">
+            <div class="card-title">CHI TIẾT TỪNG CA</div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>CA</th>
+                            <th>THỜI GIAN</th>
+                            <th>SẢN LƯỢNG</th>
+                            <th>RUN</th>
+                            <th>STOP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>CA 1</td>
+                            <td>06:00 - 14:00</td>
+                            <td id="tableShift1">0,0 m</td>
+                            <td id="tableRun1">00:00:00</td>
+                            <td id="tableStop1">00:00:00</td>
+                        </tr>
+                        <tr>
+                            <td>CA 2</td>
+                            <td>14:00 - 22:00</td>
+                            <td id="tableShift2">0,0 m</td>
+                            <td id="tableRun2">00:00:00</td>
+                            <td id="tableStop2">00:00:00</td>
+                        </tr>
+                        <tr>
+                            <td>CA 3</td>
+                            <td>22:00 - 06:00</td>
+                            <td id="tableShift3">0,0 m</td>
+                            <td id="tableRun3">00:00:00</td>
+                            <td id="tableStop3">00:00:00</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <div class="card" style="margin-bottom: 0;">
-        <div class="card-title">CHI TIẾT TỪNG CA</div>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr><th>CA</th><th>THỜI GIAN</th><th>SẢN LƯỢNG</th><th>RUN</th><th>STOP</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>CA 1</td><td>06:00 - 14:00</td><td id="tableShift1">0,0 m</td><td id="tableRun1">00:00:00</td><td id="tableStop1">00:00:00</td></tr>
-                    <tr><td>CA 2</td><td>14:00 - 22:00</td><td id="tableShift2">0,0 m</td><td id="tableRun2">00:00:00</td><td id="tableStop2">00:00:00</td></tr>
-                    <tr><td>CA 3</td><td>22:00 - 06:00</td><td id="tableShift3">0,0 m</td><td id="tableRun3">00:00:00</td><td id="tableStop3">00:00:00</td></tr>
-                </tbody>
-            </table>
+    <!-- PAGE 1: CÀI ĐẶT THIẾT BỊ -->
+    <div id="page1" class="page">
+        <div class="card">
+            <div class="card-title">CÀI ĐẶT THIẾT BỊ</div>
+            <div class="form-row">
+                <label for="wifiSSID">WiFi SSID</label>
+                <input id="wifiSSID" type="text" value="SABEPA NEW">
+            </div>
+            <div class="form-row">
+                <label for="wifiPassword">WiFi Password</label>
+                <input id="wifiPassword" type="password" value="Sabepa@123">
+            </div>
+            <div class="form-row">
+                <label for="settingDiameter">Đường kính trục (mm)</label>
+                <input id="settingDiameter" type="number" step="0.1" value="120">
+            </div>
+            <button class="action btn-blue" onclick="saveSettings()">LƯU CẤU HÌNH</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">GOOGLE SHEETS & RESET DỮ LIỆU</div>
+            <button class="action btn-blue" onclick="syncToGoogleSheet()">Đồng bộ Google Sheets</button>
+            <button class="action btn-orange" onclick="resetBatch()">Reset Batch</button>
+            <button class="action btn-danger" onclick="resetTotal()">Reset Tổng</button>
         </div>
     </div>
-</div>
-
-<!-- PAGE 1 - CÀI ĐẶT -->
-<div id="page1" class="page" style="gap: 15px;">
-    <div class="card" style="flex: 1;">
-        <div class="card-title">CÀI ĐẶT THIẾT BỊ</div>
-        <div class="form-row"><label>WiFi SSID</label><input id="wifiSSID" value="SABEPA NEW"></div>
-        <div class="form-row"><label>WiFi Password</label><input id="wifiPassword" type="password" value="Sabepa@123"></div>
-        <div class="form-row"><label>Đường kính trục (mm)</label><input id="settingDiameter" type="number" step="0.1" value="120"></div>
-        <button class="action btn-blue" onclick="saveSettings()">LƯU CẤU HÌNH</button>
-    </div>
-
-    <div class="card" style="flex: 1;">
-        <div class="card-title">GOOGLE SHEETS & RESET DỮ LIỆU</div>
-        <button class="action btn-blue" onclick="syncToGoogleSheet()">Đồng bộ Google Sheets</button>
-        <button class="action btn-orange" onclick="resetBatch()">Reset Batch</button>
-        <button class="action btn-danger" onclick="resetTotal()">Reset Tổng</button>
-    </div>
-</div>
 
 </div>
 
+<!-- Global Popup Toast Container -->
 <div id="toast" class="toast"></div>
 
+<!-- Dashboard Logic Script -->
 <script>
+// MQTT & Google Sheets Endpoint Configuration
 const MQTT_URL = "wss://broker.hivemq.com:8884/mqtt";
 const TELEMETRY_TOPIC = "factory/production/meter1";
 const CONTROL_TOPIC = "factory/production/control";
@@ -263,8 +545,9 @@ let latestData = {
     shiftStop1: 0, shiftStop2: 0, shiftStop3: 0
 };
 
-function switchTab(index){
-    for(let i=0; i<2; i++){
+// Tab Switching
+function switchTab(index) {
+    for(let i = 0; i < 2; i++) {
         document.getElementById("page" + i).classList.remove("active");
         document.getElementById("nav" + i).classList.remove("active");
     }
@@ -272,10 +555,11 @@ function switchTab(index){
     document.getElementById("nav" + index).classList.add("active");
 }
 
-function checkPasswordAndSwitch(){
+// Password Protection for Settings
+function checkPasswordAndSwitch() {
     let pass = prompt("Nhập mật khẩu truy cập trang Cài đặt:");
     if(pass === null) return;
-    if(pass === ADMIN_PASSWORD){
+    if(pass === ADMIN_PASSWORD) {
         switchTab(1);
         showToast("Đăng nhập Cài đặt thành công!");
     } else {
@@ -283,21 +567,32 @@ function checkPasswordAndSwitch(){
     }
 }
 
-function formatNumber(v){ return Number(v || 0).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
-function formatTime(sec){
+// Formatting Helper Functions
+function formatNumber(v) { 
+    return Number(v || 0).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); 
+}
+
+function formatTime(sec) {
     sec = Math.floor(Number(sec) || 0);
-    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
     return String(h).padStart(2, '0') + ":" + String(m).padStart(2, '0') + ":" + String(s).padStart(2, '0');
 }
-function getShiftTime(s){ return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; }
 
-function updateUI(d){
+function getShiftTime(s) { 
+    return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; 
+}
+
+// UI State Updater
+function updateUI(d) {
     latestData = { ...latestData, ...d };
 
     document.getElementById("speed").textContent = Number(latestData.speed || 0).toFixed(0);
     const st = latestData.status === "RUN" ? "RUN" : "STOP";
     const el = document.getElementById("machineStatus");
-    el.textContent = st; el.className = "status " + st;
+    el.textContent = st; 
+    el.className = "status " + st;
 
     document.getElementById("batch").textContent = formatNumber(latestData.batch);
     document.getElementById("day").textContent = formatNumber(latestData.day);
@@ -307,52 +602,76 @@ function updateUI(d){
     document.getElementById("currentShift").textContent = latestData.shiftName || ("CA " + shift);
     document.getElementById("shiftTime").textContent = getShiftTime(shift);
 
-    for(let i=1; i<=3; i++){
+    for(let i = 1; i <= 3; i++) {
         document.getElementById("tableShift" + i).textContent = formatNumber(latestData["shift" + i]) + " m";
         document.getElementById("tableRun" + i).textContent = formatTime(latestData["shiftRun" + i]);
         document.getElementById("tableStop" + i).textContent = formatTime(latestData["shiftStop" + i]);
     }
 }
 
-function showToast(msg){
+// Toast Notification
+function showToast(msg) {
     const t = document.getElementById("toast");
-    t.textContent = msg; t.style.display = "block";
-    setTimeout(() => { t.style.display = "none"; }, 2500);
+    t.textContent = msg; 
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 3000);
 }
 
+// MQTT WebSockets Client Setup
 let client = null;
-function connectMQTT(){
+function connectMQTT() {
     client = mqtt.connect(MQTT_URL, { clientId: "dash_" + Math.random().toString(16).substring(2), clean: true });
+    
     client.on("connect", () => {
-        document.getElementById("mqttStatus").textContent = "MQTT ONLINE";
-        document.getElementById("mqttStatus").className = "mqtt-ok";
+        const mqttStatusEl = document.getElementById("mqttStatus");
+        mqttStatusEl.textContent = "MQTT ONLINE";
+        mqttStatusEl.className = "mqtt-ok";
         document.getElementById("statusDot").classList.add("connected");
         client.subscribe(TELEMETRY_TOPIC);
-        showToast("Đã kết nối MQTT");
+        showToast("Đã kết nối máy chủ MQTT WebSocket");
     });
+    
     client.on("message", (t, m) => {
         if(t === TELEMETRY_TOPIC) {
-            try { updateUI(JSON.parse(m.toString())); } catch(e){}
+            try { 
+                updateUI(JSON.parse(m.toString())); 
+            } catch(e) {
+                console.error("Lỗi parse JSON:", e);
+            }
         }
     });
+
     client.on("close", () => {
-        document.getElementById("mqttStatus").textContent = "MQTT OFFLINE";
-        document.getElementById("mqttStatus").className = "mqtt-off";
+        const mqttStatusEl = document.getElementById("mqttStatus");
+        mqttStatusEl.textContent = "MQTT OFFLINE";
+        mqttStatusEl.className = "mqtt-off";
         document.getElementById("statusDot").classList.remove("connected");
     });
 }
 
-function sendCommand(cmd){
-    if(!client || !client.connected){ showToast("MQTT chưa kết nối"); return; }
+function sendCommand(cmd) {
+    if(!client || !client.connected) { 
+        showToast("MQTT chưa kết nối!"); 
+        return; 
+    }
     client.publish(CONTROL_TOPIC, cmd);
-    showToast("Đã gửi " + cmd);
+    showToast("Đã gửi lệnh: " + cmd);
 }
 
-function resetBatch(){ if(confirm("Reset Batch?")) sendCommand("RESET_BATCH"); }
-function resetTotal(){ if(confirm("Reset Tổng?")) sendCommand("RESET_TOTAL"); }
-function saveSettings(){ showToast("Đã lưu cấu hình thiết bị!"); }
+function resetBatch() { 
+    if(confirm("Xác nhận Reset sản lượng Batch?")) sendCommand("RESET_BATCH"); 
+}
 
-async function syncToGoogleSheet(){
+function resetTotal() { 
+    if(confirm("Xác nhận Reset Tổng sản lượng?")) sendCommand("RESET_TOTAL"); 
+}
+
+function saveSettings() { 
+    showToast("Đã lưu cấu hình thiết bị!"); 
+}
+
+// Sync to Google Sheets
+async function syncToGoogleSheet() {
     const data = {
         device: "METER-01",
         production: latestData.batch,
@@ -364,18 +683,24 @@ async function syncToGoogleSheet(){
         shift_time: getShiftTime(latestData.shift)
     };
     try {
-        await fetch(GOOGLE_SCRIPT_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(data) });
+        await fetch(GOOGLE_SCRIPT_URL, { 
+            method: "POST", 
+            mode: "no-cors", 
+            headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+            body: JSON.stringify(data) 
+        });
         showToast("Đã tự động đồng bộ Google Sheets!");
     } catch(e) {
-        showToast("Lỗi đồng bộ Google Sheets");
+        showToast("Lỗi kết nối đồng bộ Google Sheets!");
     }
 }
 
-// Tự động đồng bộ Google Sheets mỗi 5 phút (300000 ms) kèm thông báo ở góc
+// Auto-sync every 5 minutes (300,000 ms)
 setInterval(() => {
     syncToGoogleSheet();
 }, 300000);
 
+// Initialize on page load
 window.addEventListener("load", connectMQTT);
 </script>
 </body>
