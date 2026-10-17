@@ -695,10 +695,10 @@ async function syncToGoogleSheet() {
     }
 }
 
-// Auto-sync every 5 minutes (300,000 ms)
+// Auto-sync every 60 minutes (3600,000 ms)
 setInterval(() => {
     syncToGoogleSheet();
-}, 300000);
+}, 3600000);
 
 // Initialize on page load
 window.addEventListener("load", connectMQTT);
