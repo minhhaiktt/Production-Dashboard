@@ -7,67 +7,82 @@
 <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
 <style>
 * { box-sizing: border-box; }
-body { 
+html, body { 
+    height: 100vh; 
     margin: 0; 
     font-family: Arial, Helvetica, sans-serif; 
     background: #121820; 
     color: #e5e7eb; 
-    /* Cho phép cuộn trang tự nhiên trên điện thoại */
-    overflow-y: auto; 
-    overflow-x: hidden;
+    overflow: hidden; /* Mặc định khóa cuộn trên PC/TV */
+}
+
+/* Đổi sang chế độ cuộn tự do khi xem trên điện thoại */
+@media(max-width: 900px){
+    html, body { overflow-y: auto; height: auto; }
 }
 
 .header { 
+    height: 60px;
     background: #1f2937; 
     color: white; 
-    padding: 15px 20px; 
+    padding: 0 25px; 
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
     border-bottom: 1px solid #374151; 
 }
-.title { font-size: 20px; font-weight: bold; }
+.title { font-size: 22px; font-weight: bold; }
 .subtitle { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-.connection { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #e74c3c; }
+.connection { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.status-dot { width: 11px; height: 11px; border-radius: 50%; background: #e74c3c; }
 .status-dot.connected { background: #2ecc71; }
 
 .nav { 
+    height: 45px;
     background: #1f2937; 
     display: flex; 
     border-bottom: 1px solid #374151; 
 }
-.nav button { flex: 1; padding: 12px; border: 0; background: #1f2937; color: #9ca3af; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
+.nav button { flex: 1; padding: 0; border: 0; background: #1f2937; color: #9ca3af; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
 .nav button.active { color: #3b82f6; border-bottom: 3px solid #3b82f6; background: #121820; }
 
 .container { 
     width: 100%; 
-    max-width: 1400px; 
-    margin: auto; 
-    padding: 15px; 
+    height: calc(100vh - 105px); 
+    padding: 15px 25px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+@media(max-width: 900px){
+    .container { height: auto; padding: 15px; }
 }
 
-.page { display: none; }
-.page.active { display: block; }
+.page { display: none; height: 100%; flex-direction: column; }
+.page.active { display: flex; }
+@media(max-width: 900px){
+    .page.active { display: block; height: auto; }
+}
 
 .card { 
     background: #1f2937; 
     border-radius: 10px; 
-    padding: 15px; 
-    margin-bottom: 15px; 
+    padding: 15px 20px; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
     border: 1px solid #374151; 
 }
-.card-title { font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #f3f4f6; }
+.card-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #f3f4f6; }
 
-/* Bố cục chính 2 cột: Tự động xếp dọc 1 cột khi xem trên màn hình nhỏ/điện thoại */
 .main-layout { 
     display: grid; 
     grid-template-columns: 1fr 1fr; 
     gap: 15px; 
+    flex: 1; 
+    min-height: 0;
+    margin-bottom: 15px;
 }
 @media(max-width: 900px){ 
-    .main-layout { grid-template-columns: 1fr; } 
+    .main-layout { grid-template-columns: 1fr; margin-bottom: 15px; } 
 }
 
 .speed-box { 
@@ -78,22 +93,25 @@ body {
     text-align: center; 
     background: #1f2937; 
     border-radius: 10px; 
-    padding: 25px; 
+    padding: 20px; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
     border: 1px solid #374151; 
-    min-height: 220px;
+    height: 100%; 
 }
-.speed-value { font-size: 64px; font-weight: bold; color: #3b82f6; margin: 10px 0; }
+@media(max-width: 900px){ .speed-box { min-height: 200px; } }
+
+.speed-value { font-size: 72px; font-weight: bold; color: #3b82f6; margin: 10px 0; }
 .speed-unit { font-size: 18px; color: #9ca3af; }
 .status { display: inline-block; padding: 5px 16px; border-radius: 30px; font-weight: bold; font-size: 14px; margin-top: 8px; }
 .status.RUN { background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; }
 .status.STOP { background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c; }
 
-.right-stack { display: flex; flex-direction: column; gap: 10px; }
+.right-stack { display: flex; flex-direction: column; gap: 10px; height: 100%; }
 .stat-row { 
+    flex: 1; 
     background: #1f2937; 
     border-radius: 8px; 
-    padding: 12px 15px; 
+    padding: 0 20px; 
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
@@ -103,14 +121,16 @@ body {
     border-right: 1px solid #374151; 
     border-bottom: 1px solid #374151; 
 }
-.stat-label { font-size: 13px; font-weight: bold; color: #9ca3af; }
+@media(max-width: 900px){ .stat-row { padding: 12px 15px; } }
+
+.stat-label { font-size: 14px; font-weight: bold; color: #9ca3af; }
 .stat-val-wrap { text-align: right; }
-.stat-value { font-size: 20px; font-weight: bold; color: #f3f4f6; }
+.stat-value { font-size: 22px; font-weight: bold; color: #f3f4f6; }
 .stat-unit { font-size: 12px; color: #9ca3af; }
 
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; min-width: 500px; }
-th, td { padding: 10px 12px; border-bottom: 1px solid #374151; text-align: left; white-space: nowrap; color: #d1d5db; font-size: 13px; }
+.table-wrap { overflow-x: auto; flex: 1; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 15px; border-bottom: 1px solid #374151; text-align: left; white-space: nowrap; color: #d1d5db; font-size: 14px; }
 th { background: #111827; color: #9ca3af; }
 
 button.action { border: 0; border-radius: 7px; padding: 10px 18px; cursor: pointer; font-weight: bold; font-size: 14px; margin-right: 8px; margin-bottom: 8px; transition: opacity 0.2s; }
@@ -119,8 +139,9 @@ button.action:hover { opacity: 0.85; }
 .btn-orange { background: #d97706; color: white; }
 .btn-danger { background: #dc2626; color: white; }
 
-.form-row { display: grid; grid-template-columns: 180px 1fr; align-items: center; margin-bottom: 12px; gap: 15px; }
-.form-row label { font-weight: bold; color: #d1d5db; font-size: 13px; }
+.form-row { display: grid; grid-template-columns: 200px 1fr; align-items: center; margin-bottom: 12px; gap: 15px; }
+@media(max-width: 900px){ .form-row { grid-template-columns: 1fr; gap: 5px; } }
+.form-row label { font-weight: bold; color: #d1d5db; font-size: 14px; }
 input { width: 100%; padding: 9px; background: #111827; border: 1px solid #374151; color: white; border-radius: 6px; font-size: 14px; }
 input:focus { border-color: #3b82f6; outline: none; }
 .mqtt-ok { color: #2ecc71; font-weight: bold; }
@@ -151,15 +172,13 @@ input:focus { border-color: #3b82f6; outline: none; }
 <!-- PAGE 0 - TỔNG QUAN -->
 <div id="page0" class="page active">
     <div class="main-layout">
-        <!-- Cột Trái: Tốc độ hiện tại -->
         <div class="speed-box">
-            <div style="font-size: 14px; font-weight: bold; color: #9ca3af;">TỐC ĐỘ HIỆN TẠI</div>
+            <div style="font-size: 15px; font-weight: bold; color: #9ca3af;">TỐC ĐỘ HIỆN TẠI</div>
             <div id="speed" class="speed-value">0</div>
             <div class="speed-unit">m/min</div>
             <span id="machineStatus" class="status STOP">STOP</span>
         </div>
 
-        <!-- Cột Phải: Các thông số -->
         <div class="right-stack">
             <div class="stat-row">
                 <div class="stat-label">SẢN LƯỢNG CA</div>
@@ -182,15 +201,14 @@ input:focus { border-color: #3b82f6; outline: none; }
             <div class="stat-row" style="border-left-color: #f59e0b;">
                 <div class="stat-label">CA HIỆN TẠI</div>
                 <div class="stat-val-wrap">
-                    <span id="currentShift" class="stat-value" style="font-size: 16px;">CA 1</span>
+                    <span id="currentShift" class="stat-value" style="font-size: 18px;">CA 1</span>
                     <div id="shiftTime" class="stat-unit">06:00 - 14:00</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- BẢNG CHI TIẾT TỪNG CA -->
-    <div class="card" style="margin-top: 15px;">
+    <div class="card" style="margin-bottom: 0;">
         <div class="card-title">CHI TIẾT TỪNG CA</div>
         <div class="table-wrap">
             <table>
@@ -208,8 +226,8 @@ input:focus { border-color: #3b82f6; outline: none; }
 </div>
 
 <!-- PAGE 1 - CÀI ĐẶT -->
-<div id="page1" class="page">
-    <div class="card">
+<div id="page1" class="page" style="gap: 15px;">
+    <div class="card" style="flex: 1;">
         <div class="card-title">CÀI ĐẶT THIẾT BỊ</div>
         <div class="form-row"><label>WiFi SSID</label><input id="wifiSSID" value="SABEPA NEW"></div>
         <div class="form-row"><label>WiFi Password</label><input id="wifiPassword" type="password" value="Sabepa@123"></div>
@@ -217,7 +235,7 @@ input:focus { border-color: #3b82f6; outline: none; }
         <button class="action btn-blue" onclick="saveSettings()">LƯU CẤU HÌNH</button>
     </div>
 
-    <div class="card">
+    <div class="card" style="flex: 1;">
         <div class="card-title">GOOGLE SHEETS & RESET DỮ LIỆU</div>
         <button class="action btn-blue" onclick="syncToGoogleSheet()">Đồng bộ Google Sheets</button>
         <button class="action btn-orange" onclick="resetBatch()">Reset Batch</button>
@@ -347,12 +365,13 @@ async function syncToGoogleSheet(){
     };
     try {
         await fetch(GOOGLE_SCRIPT_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(data) });
-        showToast("Đã đồng bộ Google Sheets thành công!");
+        showToast("Đã tự động đồng bộ Google Sheets!");
     } catch(e) {
         showToast("Lỗi đồng bộ Google Sheets");
     }
 }
-// Tự động đồng bộ Google Sheets mỗi 5 phút (300000 ms)
+
+// Tự động đồng bộ Google Sheets mỗi 5 phút (300000 ms) kèm thông báo ở góc
 setInterval(() => {
     syncToGoogleSheet();
 }, 300000);
