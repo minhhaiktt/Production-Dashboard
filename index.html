@@ -501,11 +501,11 @@ input:focus {
             <div class="card-title">CÀI ĐẶT THIẾT BỊ</div>
             <div class="form-row">
                 <label for="wifiSSID">WiFi SSID</label>
-                <input id="wifiSSID" type="text" value="HTFamily">
+                <input id="wifiSSID" type="text" value="SABEPA NEW">
             </div>
             <div class="form-row">
                 <label for="wifiPassword">WiFi Password</label>
-                <input id="wifiPassword" type="password" value="Mh334576">
+                <input id="wifiPassword" type="password" value="Sabepa@123">
             </div>
             <div class="form-row">
                 <label for="settingDiameter">Đường kính trục (mm)</label>
@@ -540,10 +540,13 @@ const ADMIN_PASSWORD = "123";
 let latestData = {
     speed: 0, batch: 0, day: 0, total: 0,
     shift: 1, shiftName: "CA 1", status: "STOP",
-    shift1: 0, shift2: 0, shift3: 0,
-    shiftRun1: 0, shiftRun2: 0, shiftRun3: 0,
-    shiftStop1: 0, shiftStop2: 0, shiftStop3: 0
+    p1: 0, p2: 0, p3: 0,
+    r1: 0, r2: 0, r3: 0,
+    s1: 0, s2: 0, s3: 0
 };
+
+// Biến theo dõi thời gian thực nhận MQTT (Watchdog 10 giây)
+let lastMqttPacketTime = Date.now();
 
 // Tab Switching
 function switchTab(index) {
@@ -555,7 +558,6 @@ function switchTab(index) {
     document.getElementById("nav" + index).classList.add("active");
 }
 
-// Password Protection for Settings
 function checkPasswordAndSwitch() {
     let pass = prompt("Nhập mật khẩu truy cập trang Cài đặt:");
     if(pass === null) return;
@@ -567,7 +569,6 @@ function checkPasswordAndSwitch() {
     }
 }
 
-// Formatting Helper Functions
 function formatNumber(v) { 
     return Number(v || 0).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); 
 }
@@ -584,25 +585,27 @@ function getShiftTime(s) {
     return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; 
 }
 
-// UI State Updater - Ánh xạ đầy đủ tên viết tắt mới từ ESP32
+// UI State Updater - Ánh xạ chuẩn xác từng ca độc lập
 function updateUI(raw) {
+    lastMqttPacketTime = Date.now(); // Cập nhật mốc thời gian nhận gói tin thành công
+
     let d = {
-        speed: raw.spd !== undefined ? raw.spd : (raw.speed !== undefined ? raw.speed : latestData.speed),
-        status: raw.sts !== undefined ? raw.sts : (raw.status !== undefined ? raw.status : latestData.status),
-        total: raw.tot !== undefined ? raw.tot : (raw.total !== undefined ? raw.total : latestData.total),
-        batch: (raw.batch !== undefined && raw.batch !== null) ? Number(raw.batch) : latestData.batch, // Nhận số 0 chuẩn xác
-        day: (raw.day !== undefined && raw.day !== null) ? Number(raw.day) : latestData.day,
+        speed: raw.spd !== undefined ? raw.spd : latestData.speed,
+        status: raw.sts !== undefined ? raw.sts : latestData.status,
+        total: raw.tot !== undefined ? raw.tot : latestData.total,
+        batch: raw.batch !== undefined ? raw.batch : latestData.batch,
+        day: raw.day !== undefined ? raw.day : latestData.day,
         shift: raw.shift !== undefined ? raw.shift : latestData.shift,
-        shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : (raw.shiftName || latestData.shiftName),
-        shift1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.shift1),
-        shift2: raw.p2 !== undefined ? raw.p2 : (raw.shiftProd2 !== undefined ? raw.shiftProd2 : latestData.shift2),
-        shift3: raw.p3 !== undefined ? raw.p3 : (raw.shiftProd3 !== undefined ? raw.shiftProd3 : latestData.shift3),
-        shiftRun1: raw.shiftRun1 !== undefined ? raw.shiftRun1 : latestData.shiftRun1,
-        shiftRun2: raw.shiftRun2 !== undefined ? raw.shiftRun2 : latestData.shiftRun2,
-        shiftRun3: raw.shiftRun3 !== undefined ? raw.shiftRun3 : latestData.shiftRun3,
-        shiftStop1: raw.shiftStop1 !== undefined ? raw.shiftStop1 : latestData.shiftStop1,
-        shiftStop2: raw.shiftStop2 !== undefined ? raw.shiftStop2 : latestData.shiftStop2,
-        shiftStop3: raw.shiftStop3 !== undefined ? raw.shiftStop3 : latestData.shiftStop3
+        shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : "CA 1",
+        p1: raw.p1 !== undefined ? raw.p1 : latestData.p1,
+        p2: raw.p2 !== undefined ? raw.p2 : latestData.p2,
+        p3: raw.p3 !== undefined ? raw.p3 : latestData.p3,
+        r1: raw.r1 !== undefined ? raw.r1 : latestData.r1,
+        r2: raw.r2 !== undefined ? raw.r2 : latestData.r2,
+        r3: raw.r3 !== undefined ? raw.r3 : latestData.r3,
+        s1: raw.s1 !== undefined ? raw.s1 : latestData.s1,
+        s2: raw.s2 !== undefined ? raw.s2 : latestData.s2,
+        s3: raw.s3 !== undefined ? raw.s3 : latestData.s3
     };
 
     latestData = { ...latestData, ...d };
@@ -618,58 +621,17 @@ function updateUI(raw) {
     document.getElementById("total").textContent = formatNumber(latestData.total);
 
     const shift = Number(latestData.shift || 1);
-    document.getElementById("currentShift").textContent = latestData.shiftName || ("CA " + shift);
+    document.getElementById("currentShift").textContent = latestData.shiftName;
     document.getElementById("shiftTime").textContent = getShiftTime(shift);
 
+    // Hiển thị số liệu độc lập cho từng hàng Ca 1, Ca 2, Ca 3 trong bảng
     for(let i = 1; i <= 3; i++) {
-        document.getElementById("tableShift" + i).textContent = formatNumber(latestData["shift" + i]) + " m";
-        document.getElementById("tableRun" + i).textContent = formatTime(latestData["shiftRun" + i]);
-        document.getElementById("tableStop" + i).textContent = formatTime(latestData["shiftStop" + i]);
-    }
-}function updateUI(raw) {
-    let d = {
-        speed: raw.spd !== undefined ? raw.spd : (raw.speed !== undefined ? raw.speed : latestData.speed),
-        status: raw.sts !== undefined ? raw.sts : (raw.status !== undefined ? raw.status : latestData.status),
-        total: raw.tot !== undefined ? raw.tot : (raw.total !== undefined ? raw.total : latestData.total),
-        batch: (raw.batch !== undefined && raw.batch !== null) ? Number(raw.batch) : latestData.batch, // Nhận số 0 chuẩn xác
-        day: (raw.day !== undefined && raw.day !== null) ? Number(raw.day) : latestData.day,
-        shift: raw.shift !== undefined ? raw.shift : latestData.shift,
-        shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : (raw.shiftName || latestData.shiftName),
-        shift1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.shift1),
-        shift2: raw.p2 !== undefined ? raw.p2 : (raw.shiftProd2 !== undefined ? raw.shiftProd2 : latestData.shift2),
-        shift3: raw.p3 !== undefined ? raw.p3 : (raw.shiftProd3 !== undefined ? raw.shiftProd3 : latestData.shift3),
-        shiftRun1: raw.shiftRun1 !== undefined ? raw.shiftRun1 : latestData.shiftRun1,
-        shiftRun2: raw.shiftRun2 !== undefined ? raw.shiftRun2 : latestData.shiftRun2,
-        shiftRun3: raw.shiftRun3 !== undefined ? raw.shiftRun3 : latestData.shiftRun3,
-        shiftStop1: raw.shiftStop1 !== undefined ? raw.shiftStop1 : latestData.shiftStop1,
-        shiftStop2: raw.shiftStop2 !== undefined ? raw.shiftStop2 : latestData.shiftStop2,
-        shiftStop3: raw.shiftStop3 !== undefined ? raw.shiftStop3 : latestData.shiftStop3
-    };
-
-    latestData = { ...latestData, ...d };
-
-    document.getElementById("speed").textContent = Number(latestData.speed || 0).toFixed(0);
-    const st = latestData.status === "RUN" ? "RUN" : "STOP";
-    const el = document.getElementById("machineStatus");
-    el.textContent = st; 
-    el.className = "status " + st;
-
-    document.getElementById("batch").textContent = formatNumber(latestData.batch);
-    document.getElementById("day").textContent = formatNumber(latestData.day);
-    document.getElementById("total").textContent = formatNumber(latestData.total);
-
-    const shift = Number(latestData.shift || 1);
-    document.getElementById("currentShift").textContent = latestData.shiftName || ("CA " + shift);
-    document.getElementById("shiftTime").textContent = getShiftTime(shift);
-
-    for(let i = 1; i <= 3; i++) {
-        document.getElementById("tableShift" + i).textContent = formatNumber(latestData["shift" + i]) + " m";
-        document.getElementById("tableRun" + i).textContent = formatTime(latestData["shiftRun" + i]);
-        document.getElementById("tableStop" + i).textContent = formatTime(latestData["shiftStop" + i]);
+        document.getElementById("tableShift" + i).textContent = formatNumber(latestData["p" + i]) + " m";
+        document.getElementById("tableRun" + i).textContent = formatTime(latestData["r" + i]);
+        document.getElementById("tableStop" + i).textContent = formatTime(latestData["s" + i]);
     }
 }
 
-// Toast Notification
 function showToast(msg) {
     const t = document.getElementById("toast");
     t.textContent = msg; 
@@ -702,12 +664,30 @@ function connectMQTT() {
     });
 
     client.on("close", () => {
-        const mqttStatusEl = document.getElementById("mqttStatus");
-        mqttStatusEl.textContent = "MQTT OFFLINE";
-        mqttStatusEl.className = "mqtt-off";
-        document.getElementById("statusDot").classList.remove("connected");
+        setOfflineState();
     });
 }
+
+// Xử lý khi mất kết nối hoặc mất nguồn thiết bị (Watchdog 10 giây)
+function setOfflineState() {
+    const mqttStatusEl = document.getElementById("mqttStatus");
+    mqttStatusEl.textContent = "MQTT OFFLINE";
+    mqttStatusEl.className = "mqtt-off";
+    document.getElementById("statusDot").classList.remove("connected");
+    
+    // Ép tốc độ về 0 và trạng thái về STOP ngay lập tức khi mất kết nối
+    document.getElementById("speed").textContent = "0";
+    const el = document.getElementById("machineStatus");
+    el.textContent = "STOP";
+    el.className = "status STOP";
+}
+
+// Kiểm tra liên tục mỗi giây xem thiết bị có bị mất tín hiệu hay không (Watchdog 10 giây)
+setInterval(() => {
+    if (Date.now() - lastMqttPacketTime > 10000) { // Quá 10 giây không nhận được gói tin
+        setOfflineState();
+    }
+}, 1000);
 
 function sendCommand(cmd) {
     if(!client || !client.connected) { 
@@ -721,8 +701,8 @@ function sendCommand(cmd) {
 function resetBatch() { 
     if(confirm("Xác nhận Reset sản lượng Batch?")) {
         sendCommand("CMD_RESET_BATCH"); 
-        latestData.batch = 0; // Đặt biến nội bộ về 0
-        document.getElementById("batch").textContent = "0,0"; // Ép màn hình hiển thị 0,0 ngay lập tức
+        latestData.batch = 0; 
+        document.getElementById("batch").textContent = "0,0"; 
     }
 }
 
@@ -734,7 +714,6 @@ function saveSettings() {
     showToast("Đã lưu cấu hình thiết bị!"); 
 }
 
-// Sync to Google Sheets
 async function syncToGoogleSheet() {
     const data = {
         device: "METER-01",
@@ -759,12 +738,10 @@ async function syncToGoogleSheet() {
     }
 }
 
-// Auto-sync every 60 minutes (3600,000 ms)
 setInterval(() => {
     syncToGoogleSheet();
 }, 3600000);
 
-// Initialize on page load
 window.addEventListener("load", connectMQTT);
 </script>
 </body>
