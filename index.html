@@ -590,8 +590,49 @@ function updateUI(raw) {
         speed: raw.spd !== undefined ? raw.spd : (raw.speed !== undefined ? raw.speed : latestData.speed),
         status: raw.sts !== undefined ? raw.sts : (raw.status !== undefined ? raw.status : latestData.status),
         total: raw.tot !== undefined ? raw.tot : (raw.total !== undefined ? raw.total : latestData.total),
-        batch: raw.batch !== undefined ? raw.batch : latestData.batch,
-        day: raw.day !== undefined ? raw.day : latestData.day,
+        batch: (raw.batch !== undefined && raw.batch !== null) ? Number(raw.batch) : latestData.batch, // Nhận số 0 chuẩn xác
+        day: (raw.day !== undefined && raw.day !== null) ? Number(raw.day) : latestData.day,
+        shift: raw.shift !== undefined ? raw.shift : latestData.shift,
+        shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : (raw.shiftName || latestData.shiftName),
+        shift1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.shift1),
+        shift2: raw.p2 !== undefined ? raw.p2 : (raw.shiftProd2 !== undefined ? raw.shiftProd2 : latestData.shift2),
+        shift3: raw.p3 !== undefined ? raw.p3 : (raw.shiftProd3 !== undefined ? raw.shiftProd3 : latestData.shift3),
+        shiftRun1: raw.shiftRun1 !== undefined ? raw.shiftRun1 : latestData.shiftRun1,
+        shiftRun2: raw.shiftRun2 !== undefined ? raw.shiftRun2 : latestData.shiftRun2,
+        shiftRun3: raw.shiftRun3 !== undefined ? raw.shiftRun3 : latestData.shiftRun3,
+        shiftStop1: raw.shiftStop1 !== undefined ? raw.shiftStop1 : latestData.shiftStop1,
+        shiftStop2: raw.shiftStop2 !== undefined ? raw.shiftStop2 : latestData.shiftStop2,
+        shiftStop3: raw.shiftStop3 !== undefined ? raw.shiftStop3 : latestData.shiftStop3
+    };
+
+    latestData = { ...latestData, ...d };
+
+    document.getElementById("speed").textContent = Number(latestData.speed || 0).toFixed(0);
+    const st = latestData.status === "RUN" ? "RUN" : "STOP";
+    const el = document.getElementById("machineStatus");
+    el.textContent = st; 
+    el.className = "status " + st;
+
+    document.getElementById("batch").textContent = formatNumber(latestData.batch);
+    document.getElementById("day").textContent = formatNumber(latestData.day);
+    document.getElementById("total").textContent = formatNumber(latestData.total);
+
+    const shift = Number(latestData.shift || 1);
+    document.getElementById("currentShift").textContent = latestData.shiftName || ("CA " + shift);
+    document.getElementById("shiftTime").textContent = getShiftTime(shift);
+
+    for(let i = 1; i <= 3; i++) {
+        document.getElementById("tableShift" + i).textContent = formatNumber(latestData["shift" + i]) + " m";
+        document.getElementById("tableRun" + i).textContent = formatTime(latestData["shiftRun" + i]);
+        document.getElementById("tableStop" + i).textContent = formatTime(latestData["shiftStop" + i]);
+    }
+}function updateUI(raw) {
+    let d = {
+        speed: raw.spd !== undefined ? raw.spd : (raw.speed !== undefined ? raw.speed : latestData.speed),
+        status: raw.sts !== undefined ? raw.sts : (raw.status !== undefined ? raw.status : latestData.status),
+        total: raw.tot !== undefined ? raw.tot : (raw.total !== undefined ? raw.total : latestData.total),
+        batch: (raw.batch !== undefined && raw.batch !== null) ? Number(raw.batch) : latestData.batch, // Nhận số 0 chuẩn xác
+        day: (raw.day !== undefined && raw.day !== null) ? Number(raw.day) : latestData.day,
         shift: raw.shift !== undefined ? raw.shift : latestData.shift,
         shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : (raw.shiftName || latestData.shiftName),
         shift1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.shift1),
@@ -678,7 +719,11 @@ function sendCommand(cmd) {
 }
 
 function resetBatch() { 
-    if(confirm("Xác nhận Reset sản lượng Batch?")) sendCommand("CMD_RESET_BATCH"); 
+    if(confirm("Xác nhận Reset sản lượng Batch?")) {
+        sendCommand("CMD_RESET_BATCH"); 
+        latestData.batch = 0; // Đặt biến nội bộ về 0
+        document.getElementById("batch").textContent = "0,0"; // Ép màn hình hiển thị 0,0 ngay lập tức
+    }
 }
 
 function resetTotal() { 
