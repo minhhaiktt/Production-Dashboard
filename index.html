@@ -594,15 +594,21 @@ function updateUI(raw) {
         day: raw.day !== undefined ? raw.day : latestData.day,
         shift: raw.shift !== undefined ? raw.shift : latestData.shift,
         shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : (raw.shiftName || latestData.shiftName),
+        
+        // Sản lượng từng ca (Hứng cả p1..p3 lẫn shiftProd1..3)
         shift1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.shift1),
         shift2: raw.p2 !== undefined ? raw.p2 : (raw.shiftProd2 !== undefined ? raw.shiftProd2 : latestData.shift2),
         shift3: raw.p3 !== undefined ? raw.p3 : (raw.shiftProd3 !== undefined ? raw.shiftProd3 : latestData.shift3),
-        shiftRun1: raw.shiftRun1 !== undefined ? raw.shiftRun1 : latestData.shiftRun1,
-        shiftRun2: raw.shiftRun2 !== undefined ? raw.shiftRun2 : latestData.shiftRun2,
-        shiftRun3: raw.shiftRun3 !== undefined ? raw.shiftRun3 : latestData.shiftRun3,
-        shiftStop1: raw.shiftStop1 !== undefined ? raw.shiftStop1 : latestData.shiftStop1,
-        shiftStop2: raw.shiftStop2 !== undefined ? raw.shiftStop2 : latestData.shiftStop2,
-        shiftStop3: raw.shiftStop3 !== undefined ? raw.shiftStop3 : latestData.shiftStop3
+        
+        // Thời gian Run từng ca (Hứng r1, r2, r3 từ MQTT)
+        shiftRun1: raw.r1 !== undefined ? raw.r1 : (raw.shiftRun1 !== undefined ? raw.shiftRun1 : latestData.shiftRun1),
+        shiftRun2: raw.r2 !== undefined ? raw.r2 : (raw.shiftRun2 !== undefined ? raw.shiftRun2 : latestData.shiftRun2),
+        shiftRun3: raw.r3 !== undefined ? raw.r3 : (raw.shiftRun3 !== undefined ? raw.shiftRun3 : latestData.shiftRun3),
+        
+        // Thời gian Stop từng ca (Hứng s1, s2, s3 từ MQTT)
+        shiftStop1: raw.s1 !== undefined ? raw.s1 : (raw.shiftStop1 !== undefined ? raw.shiftStop1 : latestData.shiftStop1),
+        shiftStop2: raw.s2 !== undefined ? raw.s2 : (raw.shiftStop2 !== undefined ? raw.shiftStop2 : latestData.shiftStop2),
+        shiftStop3: raw.s3 !== undefined ? raw.s3 : (raw.shiftStop3 !== undefined ? raw.shiftStop3 : latestData.shiftStop3)
     };
 
     latestData = { ...latestData, ...d };
