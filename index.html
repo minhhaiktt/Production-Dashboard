@@ -310,6 +310,13 @@ input:focus { border-color: var(--accent-blue); outline: none; }
                         </tr>
                     </thead>
                     <tbody>
+                        <!-- DÒNG NGÀY HÔM TRƯỚC ĐÃ ĐƯỢC ĐƯA LÊN ĐẦU VÀ LÀM NỔI BẬT -->
+                        <tr style="background-color: rgba(59, 130, 246, 0.18); font-weight: 800;">
+                            <td style="color: var(--accent-blue); font-size: 1.1em;">NGÀY HÔM TRƯỚC</td>
+                            <td style="font-size: 0.95em;">24 Giờ</td>
+                            <td id="tableYesterday" style="color: var(--accent-blue); font-size: 1.25em; font-weight: 900;">0,0 m</td>
+                            <td colspan="2" style="color: var(--text-sub); font-size: 0.9em; text-align: center;">(Tổng kết 3 ca ngày cũ)</td>
+                        </tr>
                         <tr>
                             <td>CA 1</td>
                             <td>06:00 - 14:00</td>
@@ -330,13 +337,6 @@ input:focus { border-color: var(--accent-blue); outline: none; }
                             <td id="tableShift3">0,0 m</td>
                             <td id="tableRun3">00:00:00</td>
                             <td id="tableStop3">00:00:00</td>
-                        </tr>
-                        <!-- DÒNG HIỂN THỊ SẢN LƯỢNG NGÀY HÔM TRƯỚC -->
-                        <tr style="background-color: rgba(59, 130, 246, 0.1); font-weight: 700;">
-                            <td style="color: var(--accent-blue);">NGÀY HÔM TRƯỚC</td>
-                            <td>24 Giờ</td>
-                            <td id="tableYesterday" style="color: var(--accent-blue); font-weight: 800;">0,0 m</td>
-                            <td colspan="2" style="color: var(--text-sub); font-size: 0.85em; text-align: center;">(Tổng kết 3 ca ngày cũ)</td>
                         </tr>
                     </tbody>
                 </table>
