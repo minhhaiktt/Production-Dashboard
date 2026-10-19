@@ -3,15 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>METER-01 - Production Dashboard</title>
-<!-- MQTT.js library over WebSockets -->
+<title>Hệ thống Giám sát Sản xuất - METER-01</title>
+<!-- MQTT.js qua WebSockets -->
 <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
 <style>
-/* Reset & Root CSS Variables for High-DPI Fluid Scaling */
 *, *::before, *::after {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    margin: 0; padding: 0;
 }
 
 :root {
@@ -26,7 +24,6 @@
     --accent-purple: #a855f7;
     --accent-amber: #d97706;
 
-    /* Fluid scaling base font size calculated via Viewport Width (vw) */
     font-size: clamp(14px, 0.95vw, 22px);
 }
 
@@ -35,40 +32,32 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-dark);
     color: var(--text-main);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
+    display: flex; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden;
 }
 
-/* Header Component */
 .header {
     background: var(--card-bg);
     padding: clamp(0.75rem, 1.2vw, 1.75rem) clamp(1rem, 2vw, 3rem);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid var(--border-color);
 }
 
 .header .title {
-    font-size: clamp(1.2rem, 1.6vw, 2.4rem);
-    font-weight: 800;
-    letter-spacing: 0.5px;
+    font-size: clamp(1.1rem, 1.5vw, 2.2rem);
+    font-weight: 800; letter-spacing: 0.5px;
+    color: var(--text-main);
 }
 
 .header .subtitle {
     font-size: clamp(0.75rem, 0.85vw, 1.2rem);
-    color: var(--text-sub);
-    margin-top: 0.2rem;
+    color: var(--text-sub); margin-top: 0.2rem;
+    font-weight: 600;
 }
 
 .connection {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-size: clamp(0.85rem, 1vw, 1.3rem);
-    font-weight: 600;
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: clamp(0.85rem, 1vw, 1.3rem); font-weight: 600;
 }
 
 .status-dot {
@@ -85,23 +74,17 @@ body {
     box-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
 }
 
-/* Tab Navigation */
 .nav {
     background: var(--card-bg);
-    display: flex;
-    border-bottom: 1px solid var(--border-color);
+    display: flex; border-bottom: 1px solid var(--border-color);
 }
 
 .nav button {
-    flex: 1;
-    padding: clamp(0.6rem, 1vw, 1.4rem);
-    border: none;
-    background: var(--card-bg);
-    color: var(--text-sub);
-    font-weight: 700;
+    flex: 1; padding: clamp(0.6rem, 1vw, 1.4rem);
+    border: none; background: var(--card-bg);
+    color: var(--text-sub); font-weight: 700;
     font-size: clamp(0.9rem, 1.1vw, 1.5rem);
-    cursor: pointer;
-    transition: all 0.25s ease;
+    cursor: pointer; transition: all 0.25s ease;
 }
 
 .nav button.active {
@@ -110,37 +93,22 @@ body {
     background: var(--bg-dark);
 }
 
-/* Main App Layout */
 .container {
-    width: 100%;
-    max-width: 1920px;
-    margin: 0 auto;
+    width: 100%; max-width: 1920px; margin: 0 auto;
     padding: clamp(1rem, 1.8vw, 3rem);
-    display: flex;
-    flex-direction: column;
-    gap: clamp(1rem, 1.5vw, 2.5rem);
-    flex: 1;
+    display: flex; flex-direction: column;
+    gap: clamp(1rem, 1.5vw, 2.5rem); flex: 1;
 }
 
-.page {
-    display: none;
-    flex-direction: column;
-    gap: clamp(1rem, 1.5vw, 2.5rem);
-}
+.page { display: none; flex-direction: column; gap: clamp(1rem, 1.5vw, 2.5rem); }
+.page.active { display: flex; }
 
-.page.active {
-    display: flex;
-}
-
-/* Responsive Grid for Dashboard */
 .main-layout {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
-    gap: clamp(1rem, 1.5vw, 2.5rem);
-    align-items: stretch;
+    gap: clamp(1rem, 1.5vw, 2.5rem); align-items: stretch;
 }
 
-/* Cards Base */
 .card {
     background: var(--card-bg);
     border-radius: clamp(8px, 0.8vw, 16px);
@@ -151,19 +119,13 @@ body {
 
 .card-title {
     font-size: clamp(1.05rem, 1.25vw, 1.8rem);
-    font-weight: 700;
-    margin-bottom: clamp(0.8rem, 1.2vw, 2rem);
+    font-weight: 700; margin-bottom: clamp(0.8rem, 1.2vw, 2rem);
     color: var(--text-main);
 }
 
-/* Left Speed Box Card */
 .speed-box {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
+    position: relative; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
     background: var(--card-bg);
     border-radius: clamp(8px, 0.8vw, 16px);
     padding: clamp(2rem, 3vw, 4.5rem) clamp(1rem, 1.5vw, 2.5rem);
@@ -173,83 +135,44 @@ body {
 }
 
 .shift-badge {
-    position: absolute;
-    top: clamp(0.8rem, 1.2vw, 2rem);
-    left: clamp(1rem, 1.5vw, 2.5rem);
+    position: absolute; top: clamp(0.8rem, 1.2vw, 2rem); left: clamp(1rem, 1.5vw, 2.5rem);
     text-align: left;
 }
 
-.shift-badge .shift-name {
-    font-size: clamp(1.1rem, 1.4vw, 2.2rem);
-    font-weight: 800;
-    color: var(--text-main);
-}
-
-.shift-badge .shift-time {
-    font-size: clamp(0.75rem, 0.9vw, 1.3rem);
-    color: var(--text-sub);
-    margin-top: 0.2rem;
-}
+.shift-badge .shift-name { font-size: clamp(1.1rem, 1.4vw, 2.2rem); font-weight: 800; color: var(--text-main); }
+.shift-badge .shift-time { font-size: clamp(0.75rem, 0.9vw, 1.3rem); color: var(--text-sub); margin-top: 0.2rem; }
 
 .speed-label-top {
-    font-size: clamp(0.95rem, 1.1vw, 1.6rem);
-    font-weight: 700;
-    color: var(--text-sub);
-    margin-top: clamp(1rem, 1.5vw, 2.5rem);
-    letter-spacing: 1px;
+    font-size: clamp(0.95rem, 1.1vw, 1.6rem); font-weight: 700;
+    color: var(--text-sub); margin-top: clamp(1rem, 1.5vw, 2.5rem); letter-spacing: 1px;
 }
 
 .speed-value {
-    font-size: clamp(4rem, 6.5vw, 10rem);
-    font-weight: 900;
-    color: var(--accent-blue);
-    line-height: 1;
-    margin: clamp(0.3rem, 0.8vw, 1.5rem) 0;
+    font-size: clamp(4rem, 6.5vw, 10rem); font-weight: 900;
+    color: var(--accent-blue); line-height: 1; margin: clamp(0.3rem, 0.8vw, 1.5rem) 0;
 }
 
-.speed-unit {
-    font-size: clamp(1rem, 1.3vw, 1.8rem);
-    color: var(--text-sub);
-    font-weight: 700;
-}
+.speed-unit { font-size: clamp(1rem, 1.3vw, 1.8rem); color: var(--text-sub); font-weight: 700; }
 
 .status {
-    display: inline-block;
-    padding: clamp(0.3rem, 0.5vw, 0.8rem) clamp(1rem, 1.5vw, 2.5rem);
-    border-radius: 50px;
-    font-weight: 800;
-    font-size: clamp(0.85rem, 1.05vw, 1.5rem);
+    display: inline-block; padding: clamp(0.3rem, 0.5vw, 0.8rem) clamp(1rem, 1.5vw, 2.5rem);
+    border-radius: 50px; font-weight: 800; font-size: clamp(0.85rem, 1.05vw, 1.5rem);
     margin-top: clamp(0.6rem, 1vw, 1.5rem);
 }
 
-.status.RUN {
-    background: rgba(46, 204, 113, 0.15);
-    color: var(--accent-green);
-    border: 2px solid var(--accent-green);
-}
+.status.RUN { background: rgba(46, 204, 113, 0.15); color: var(--accent-green); border: 2px solid var(--accent-green); }
+.status.STOP { background: rgba(231, 76, 60, 0.15); color: var(--accent-red); border: 2px solid var(--accent-red); }
 
-.status.STOP {
-    background: rgba(231, 76, 60, 0.15);
-    color: var(--accent-red);
-    border: 2px solid var(--accent-red);
-}
-
-/* Right Stacked Production Cards */
 .right-stack {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(0.75rem, 1.2vw, 1.8rem);
-    justify-content: space-between;
+    display: flex; flex-direction: column;
+    gap: clamp(0.75rem, 1.2vw, 1.8rem); justify-content: space-between;
 }
 
 .stat-row {
-    flex: 1;
-    background: var(--card-bg);
+    flex: 1; background: var(--card-bg);
     border-radius: clamp(8px, 0.8vw, 16px);
     padding: clamp(1rem, 1.6vw, 2.5rem) clamp(1.2rem, 1.8vw, 2.8rem);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     border-left: clamp(5px, 0.5vw, 10px) solid var(--accent-blue);
     border-top: 1px solid var(--border-color);
@@ -257,145 +180,69 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
-.stat-label {
-    font-size: clamp(0.95rem, 1.2vw, 1.8rem);
-    font-weight: 700;
-    color: var(--text-sub);
-    letter-spacing: 0.5px;
-}
+.stat-label { font-size: clamp(0.95rem, 1.2vw, 1.8rem); font-weight: 700; color: var(--text-sub); letter-spacing: 0.5px; }
+.stat-val-wrap { text-align: right; }
+.stat-value { font-size: clamp(1.6rem, 2.4vw, 3.8rem); font-weight: 800; color: var(--text-main); }
+.stat-unit { font-size: clamp(0.8rem, 1vw, 1.4rem); color: var(--text-sub); font-weight: 700; margin-left: 0.3rem; }
 
-.stat-val-wrap {
-    text-align: right;
-}
-
-.stat-value {
-    font-size: clamp(1.6rem, 2.4vw, 3.8rem);
-    font-weight: 800;
-    color: var(--text-main);
-}
-
-.stat-unit {
-    font-size: clamp(0.8rem, 1vw, 1.4rem);
-    color: var(--text-sub);
-    font-weight: 700;
-    margin-left: 0.3rem;
-}
-
-/* Data Table Component */
-.table-wrap {
-    width: 100%;
-    overflow-x: auto;
-    border-radius: 8px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-}
-
+.table-wrap { width: 100%; overflow-x: auto; border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
 th, td {
     padding: clamp(0.7rem, 1vw, 1.5rem) clamp(0.8rem, 1.2vw, 1.8rem);
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
+    border-bottom: 1px solid var(--border-color); white-space: nowrap;
     font-size: clamp(0.85rem, 1vw, 1.4rem);
 }
+th { background-color: #111827; color: var(--text-sub); font-weight: 700; text-transform: uppercase; }
 
-th {
-    background-color: #111827;
-    color: var(--text-sub);
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-/* Action Buttons & Forms */
 button.action {
-    border: none;
-    border-radius: clamp(6px, 0.5vw, 12px);
+    border: none; border-radius: clamp(6px, 0.5vw, 12px);
     padding: clamp(0.6rem, 0.9vw, 1.4rem) clamp(1rem, 1.5vw, 2.2rem);
-    cursor: pointer;
-    font-weight: 700;
-    font-size: clamp(0.85rem, 1vw, 1.4rem);
-    margin-right: 0.6rem;
-    margin-bottom: 0.6rem;
+    cursor: pointer; font-weight: 700; font-size: clamp(0.85rem, 1vw, 1.4rem);
+    margin-right: 0.6rem; margin-bottom: 0.6rem;
     transition: opacity 0.2s ease, transform 0.1s ease;
 }
-
-button.action:active {
-    transform: scale(0.98);
-}
-
-button.action:hover {
-    opacity: 0.9;
-}
+button.action:active { transform: scale(0.98); }
+button.action:hover { opacity: 0.9; }
 
 .btn-blue { background: var(--accent-blue); color: #ffffff; }
 .btn-orange { background: var(--accent-amber); color: #ffffff; }
 .btn-danger { background: var(--accent-red); color: #ffffff; }
 
 .form-row {
-    display: grid;
-    grid-template-columns: minmax(150px, 220px) 1fr;
-    align-items: center;
-    margin-bottom: clamp(0.8rem, 1.2vw, 1.8rem);
+    display: grid; grid-template-columns: minmax(150px, 220px) 1fr;
+    align-items: center; margin-bottom: clamp(0.8rem, 1.2vw, 1.8rem);
     gap: clamp(0.8rem, 1.2vw, 1.8rem);
 }
+@media (max-width: 768px) { .form-row { grid-template-columns: 1fr; gap: 0.4rem; } }
 
-@media (max-width: 768px) {
-    .form-row {
-        grid-template-columns: 1fr;
-        gap: 0.4rem;
-    }
-}
-
-.form-row label {
-    font-weight: 700;
-    color: var(--text-main);
-    font-size: clamp(0.85rem, 1vw, 1.3rem);
-}
-
+.form-row label { font-weight: 700; color: var(--text-main); font-size: clamp(0.85rem, 1vw, 1.3rem); }
 input {
-    width: 100%;
-    padding: clamp(0.5rem, 0.8vw, 1.2rem);
-    background: #111827;
-    border: 1px solid var(--border-color);
-    color: #ffffff;
-    border-radius: clamp(4px, 0.4vw, 8px);
+    width: 100%; padding: clamp(0.5rem, 0.8vw, 1.2rem);
+    background: #111827; border: 1px solid var(--border-color);
+    color: #ffffff; border-radius: clamp(4px, 0.4vw, 8px);
     font-size: clamp(0.85rem, 1vw, 1.3rem);
 }
-
-input:focus {
-    border-color: var(--accent-blue);
-    outline: none;
-}
+input:focus { border-color: var(--accent-blue); outline: none; }
 
 .mqtt-ok { color: var(--accent-green); font-weight: 700; }
 .mqtt-off { color: var(--accent-red); font-weight: 700; }
 
-/* Notification Toast */
 .toast {
-    position: fixed;
-    right: clamp(15px, 2vw, 40px);
-    bottom: clamp(15px, 2vw, 40px);
-    background: var(--card-bg);
-    color: var(--text-main);
+    position: fixed; right: clamp(15px, 2vw, 40px); bottom: clamp(15px, 2vw, 40px);
+    background: var(--card-bg); color: var(--text-main);
     padding: clamp(0.8rem, 1.2vw, 1.8rem) clamp(1.2rem, 1.6vw, 2.5rem);
-    border-radius: clamp(6px, 0.6vw, 12px);
-    display: none;
-    z-index: 9999;
-    border: 1px solid var(--border-color);
-    font-size: clamp(0.85rem, 1vw, 1.3rem);
+    border-radius: clamp(6px, 0.6vw, 12px); display: none; z-index: 9999;
+    border: 1px solid var(--border-color); font-size: clamp(0.85rem, 1vw, 1.3rem);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 </style>
 </head>
 <body>
 
-<!-- Header Top Navigation -->
 <div class="header">
     <div>
-        <div class="title">PRODUCTION METER</div>
-        <div class="subtitle">METER-01 • Giám sát sản lượng</div>
+        <div class="title">CÔNG TY CỔ PHẦN BAO BÌ BIA SÀI GÒN</div>
+        <div class="subtitle">HỆ THỐNG GIÁM SÁT SẢN XUẤT - Phát triển bởi P.M.Hải</div>
     </div>
     <div class="connection">
         <span id="statusDot" class="status-dot"></span>
@@ -403,19 +250,14 @@ input:focus {
     </div>
 </div>
 
-<!-- Tab Header Bar -->
 <div class="nav">
     <button id="nav0" class="active" onclick="switchTab(0)">TỔNG QUAN</button>
     <button id="nav1" onclick="checkPasswordAndSwitch()">CÀI ĐẶT</button>
 </div>
 
-<!-- Main Body Container -->
 <div class="container">
-
-    <!-- PAGE 0: TỔNG QUAN DASHBOARD -->
     <div id="page0" class="page active">
         <div class="main-layout">
-            <!-- Left Card: Current Speed & Shift Badge -->
             <div class="speed-box">
                 <div class="shift-badge">
                     <div id="currentShift" class="shift-name">CA 1</div>
@@ -427,7 +269,6 @@ input:focus {
                 <span id="machineStatus" class="status STOP">STOP</span>
             </div>
 
-            <!-- Right Column: 3 Balanced Metric Cards -->
             <div class="right-stack">
                 <div class="stat-row" style="border-left-color: var(--accent-blue);">
                     <div class="stat-label">SẢN LƯỢNG CA</div>
@@ -453,7 +294,6 @@ input:focus {
             </div>
         </div>
 
-        <!-- Shift Details Table -->
         <div class="card">
             <div class="card-title">CHI TIẾT TỪNG CA</div>
             <div class="table-wrap">
@@ -495,17 +335,16 @@ input:focus {
         </div>
     </div>
 
-    <!-- PAGE 1: CÀI ĐẶT THIẾT BỊ -->
     <div id="page1" class="page">
         <div class="card">
             <div class="card-title">CÀI ĐẶT THIẾT BỊ</div>
             <div class="form-row">
                 <label for="wifiSSID">WiFi SSID</label>
-                <input id="wifiSSID" type="text" value="HTFamily">
+                <input id="wifiSSID" type="text" value="SABEPA NEW">
             </div>
             <div class="form-row">
                 <label for="wifiPassword">WiFi Password</label>
-                <input id="wifiPassword" type="password" value="Mh334576">
+                <input id="wifiPassword" type="password" value="Sabepa@123">
             </div>
             <div class="form-row">
                 <label for="settingDiameter">Đường kính trục (mm)</label>
@@ -521,15 +360,11 @@ input:focus {
             <button class="action btn-danger" onclick="resetTotal()">Reset Tổng</button>
         </div>
     </div>
-
 </div>
 
-<!-- Global Popup Toast Container -->
 <div id="toast" class="toast"></div>
 
-<!-- Dashboard Logic Script -->
 <script>
-// MQTT & Google Sheets Endpoint Configuration
 const MQTT_URL = "wss://broker.hivemq.com:8884/mqtt";
 const TELEMETRY_TOPIC = "factory/production/meter1";
 const CONTROL_TOPIC = "factory/production/control";
@@ -540,12 +375,11 @@ const ADMIN_PASSWORD = "123";
 let latestData = {
     speed: 0, batch: 0, day: 0, total: 0,
     shift: 1, shiftName: "CA 1", status: "STOP",
-    shift1: 0, shift2: 0, shift3: 0,
-    shiftRun1: 0, shiftRun2: 0, shiftRun3: 0,
-    shiftStop1: 0, shiftStop2: 0, shiftStop3: 0
+    p1: 0, p2: 0, p3: 0,
+    r1: 0, r2: 0, r3: 0,
+    s1: 0, s2: 0, s3: 0
 };
 
-// Tab Switching
 function switchTab(index) {
     for(let i = 0; i < 2; i++) {
         document.getElementById("page" + i).classList.remove("active");
@@ -555,7 +389,6 @@ function switchTab(index) {
     document.getElementById("nav" + index).classList.add("active");
 }
 
-// Password Protection for Settings
 function checkPasswordAndSwitch() {
     let pass = prompt("Nhập mật khẩu truy cập trang Cài đặt:");
     if(pass === null) return;
@@ -567,7 +400,6 @@ function checkPasswordAndSwitch() {
     }
 }
 
-// Formatting Helper Functions
 function formatNumber(v) { 
     return Number(v || 0).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); 
 }
@@ -584,27 +416,27 @@ function getShiftTime(s) {
     return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; 
 }
 
-// UI State Updater - Ánh xạ đầy đủ tên viết tắt mới từ ESP32
 function updateUI(raw) {
     let d = {
         speed: raw.spd !== undefined ? raw.spd : (raw.speed !== undefined ? raw.speed : latestData.speed),
         status: raw.sts !== undefined ? raw.sts : (raw.status !== undefined ? raw.status : latestData.status),
         total: raw.tot !== undefined ? raw.tot : (raw.total !== undefined ? raw.total : latestData.total),
-        batch: raw.batch !== undefined ? raw.batch : latestData.batch, // Biến batch riêng (nếu muốn reset theo mẻ)
+        batch: raw.batch !== undefined ? raw.batch : latestData.batch,
         day: raw.day !== undefined ? raw.day : latestData.day,
         shift: raw.shift !== undefined ? raw.shift : latestData.shift,
         shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : (raw.shiftName || latestData.shiftName),
         
-        shift1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.shift1),
-        shift2: raw.p2 !== undefined ? raw.p2 : (raw.shiftProd2 !== undefined ? raw.shiftProd2 : latestData.shift2),
-        shift3: raw.p3 !== undefined ? raw.p3 : (raw.shiftProd3 !== undefined ? raw.shiftProd3 : latestData.shift3),
+        p1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.p1),
+        p2: raw.p2 !== undefined ? raw.p2 : (raw.shiftProd2 !== undefined ? raw.shiftProd2 : latestData.p2),
+        p3: raw.p3 !== undefined ? raw.p3 : (raw.shiftProd3 !== undefined ? raw.shiftProd3 : latestData.p3),
         
-        r1: raw.r1 !== undefined ? raw.r1 : latestData.r1,
-        r2: raw.r2 !== undefined ? raw.r2 : latestData.r2,
-        r3: raw.r3 !== undefined ? raw.r3 : latestData.r3,
-        s1: raw.s1 !== undefined ? raw.s1 : latestData.s1,
-        s2: raw.s2 !== undefined ? raw.s2 : latestData.s2,
-        s3: raw.s3 !== undefined ? raw.s3 : latestData.s3
+        r1: raw.r1 !== undefined ? raw.r1 : (raw.shiftRun1 !== undefined ? raw.shiftRun1 : latestData.r1),
+        r2: raw.r2 !== undefined ? raw.r2 : (raw.shiftRun2 !== undefined ? raw.shiftRun2 : latestData.r2),
+        r3: raw.r3 !== undefined ? raw.r3 : (raw.shiftRun3 !== undefined ? raw.shiftRun3 : latestData.r3),
+        
+        s1: raw.s1 !== undefined ? raw.s1 : (raw.shiftStop1 !== undefined ? raw.shiftStop1 : latestData.s1),
+        s2: raw.s2 !== undefined ? raw.s2 : (raw.shiftStop2 !== undefined ? raw.shiftStop2 : latestData.s2),
+        s3: raw.s3 !== undefined ? raw.s3 : (raw.shiftStop3 !== undefined ? raw.shiftStop3 : latestData.s3)
     };
 
     latestData = { ...latestData, ...d };
@@ -615,31 +447,24 @@ function updateUI(raw) {
     el.textContent = st; 
     el.className = "status " + st;
 
-    // --- ĐIỀU CHỈNH QUAN TRỌNG CHO CÁC LABEL ---
     const currentShiftNum = Number(latestData.shift || 1);
     
-    // 1. SẢN LƯỢNG CA: Phải hiển thị đúng sản lượng của riêng ca hiện tại (p1, p2 hoặc p3)
-    let currentShiftProduction = currentShiftNum === 1 ? latestData.shift1 : 
-                                 currentShiftNum === 2 ? latestData.shift2 : latestData.shift3;
-    document.getElementById("batch").textContent = formatNumber(currentShiftProduction);
-
-    // 2. SẢN LƯỢNG NGÀY: Tổng sản lượng 3 ca trong ngày
+    let currentShiftProd = currentShiftNum === 1 ? latestData.p1 : 
+                            currentShiftNum === 2 ? latestData.p2 : latestData.p3;
+    document.getElementById("batch").textContent = formatNumber(currentShiftProd);
     document.getElementById("day").textContent = formatNumber(latestData.day);
-
-    // 3. TỔNG SẢN LƯỢNG: Tổng tích lũy thiết bị
     document.getElementById("total").textContent = formatNumber(latestData.total);
-    // ------------------------------------------
 
     document.getElementById("currentShift").textContent = latestData.shiftName || ("CA " + currentShiftNum);
     document.getElementById("shiftTime").textContent = getShiftTime(currentShiftNum);
 
     for(let i = 1; i <= 3; i++) {
-        document.getElementById("tableShift" + i).textContent = formatNumber(latestData["shift" + i]) + " m";
+        document.getElementById("tableShift" + i).textContent = formatNumber(latestData["p" + i]) + " m";
         document.getElementById("tableRun" + i).textContent = formatTime(latestData["r" + i]);
         document.getElementById("tableStop" + i).textContent = formatTime(latestData["s" + i]);
     }
 }
-// Toast Notification
+
 function showToast(msg) {
     const t = document.getElementById("toast");
     t.textContent = msg; 
@@ -647,7 +472,6 @@ function showToast(msg) {
     setTimeout(() => { t.style.display = "none"; }, 3000);
 }
 
-// MQTT WebSockets Client Setup
 let client = null;
 function connectMQTT() {
     client = mqtt.connect(MQTT_URL, { clientId: "dash_" + Math.random().toString(16).substring(2), clean: true });
@@ -689,7 +513,9 @@ function sendCommand(cmd) {
 }
 
 function resetBatch() { 
-    if(confirm("Xác nhận Reset sản lượng Batch?")) sendCommand("CMD_RESET_BATCH"); 
+    if(confirm("Xác nhận Reset sản lượng Batch?")) {
+        sendCommand("CMD_RESET_BATCH"); 
+    }
 }
 
 function resetTotal() { 
@@ -700,7 +526,6 @@ function saveSettings() {
     showToast("Đã lưu cấu hình thiết bị!"); 
 }
 
-// Sync to Google Sheets
 async function syncToGoogleSheet() {
     const data = {
         device: "METER-01",
@@ -725,12 +550,8 @@ async function syncToGoogleSheet() {
     }
 }
 
-// Auto-sync every 60 minutes (3600,000 ms)
-setInterval(() => {
-    syncToGoogleSheet();
-}, 3600000);
+setInterval(() => { syncToGoogleSheet(); }, 3600000);
 
-// Initialize on page load
 window.addEventListener("load", connectMQTT);
 </script>
 </body>
