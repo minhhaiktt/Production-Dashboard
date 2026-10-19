@@ -133,13 +133,20 @@ input { width: 100%; padding: 0.7rem; background: #111827; border: 1px solid var
         </div>
 
         <div class="card">
-            <div class="card-title">CHI TIẾT TỪNG CA</div>
+            <div class="card-title">CHI TIẾT TỪNG CA & LỊCH SỬ</div>
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>CA</th><th>THỜI GIAN</th><th>SẢN LƯỢNG</th><th>RUN</th><th>STOP</th></tr>
+                        <tr><th>DANH MỤC</th><th>THỜI GIAN</th><th>SẢN LƯỢNG</th><th>RUN</th><th>STOP</th></tr>
                     </thead>
                     <tbody>
+                        <!-- DÒNG NGÀY HÔM TRƯỚC LẤY TRỰC TIẾP TỪ GOOGLE SHEETS -->
+                        <tr style="background-color: rgba(59, 130, 246, 0.18); font-weight: 800;">
+                            <td style="color: var(--accent-blue); font-size: 1.1em;">NGÀY HÔM TRƯỚC</td>
+                            <td style="font-size: 0.95em;">24 Giờ</td>
+                            <td id="tableYesterday" style="color: var(--accent-blue); font-size: 1.25em; font-weight: 900;">0,0 m</td>
+                            <td colspan="2" style="color: var(--text-sub); font-size: 0.9em; text-align: center;">(Tổng kết 3 ca ngày cũ)</td>
+                        </tr>
                         <tr><td>CA 1</td><td>06:00 - 14:00</td><td id="tableShift1">0,0 m</td><td id="tableRun1">00:00:00</td><td id="tableStop1">00:00:00</td></tr>
                         <tr><td>CA 2</td><td>14:00 - 22:00</td><td id="tableShift2">0,0 m</td><td id="tableRun2">00:00:00</td><td id="tableStop2">00:00:00</td></tr>
                         <tr><td>CA 3</td><td>22:00 - 06:00</td><td id="tableShift3">0,0 m</td><td id="tableRun3">00:00:00</td><td id="tableStop3">00:00:00</td></tr>
@@ -170,6 +177,7 @@ input { width: 100%; padding: 0.7rem; background: #111827; border: 1px solid var
 const MQTT_URL = "wss://broker.hivemq.com:8884/mqtt";
 const TELEMETRY_TOPIC = "factory/production/meter1";
 const CONTROL_TOPIC = "factory/production/control";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec";
 const ADMIN_PASSWORD = "123"; 
 
 let latestData = {
@@ -197,6 +205,19 @@ function formatTime(sec) {
     return String(Math.floor(sec/3600)).padStart(2,'0') + ":" + String(Math.floor((sec%3600)/60)).padStart(2,'0') + ":" + String(sec%60).padStart(2,'0');
 }
 function getShiftTime(s) { return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; }
+
+// Hàm lấy dữ liệu ngày hôm qua từ Google Sheets khi mở trang
+async function fetchYesterdayData() {
+    try {
+        let res = await fetch(GOOGLE_SCRIPT_URL);
+        let data = await res.json();
+        if(data && data.yesterday !== undefined) {
+            document.getElementById("tableYesterday").textContent = formatNumber(data.yesterday) + " m";
+        }
+    } catch(e) {
+        console.error("Không thể lấy dữ liệu ngày hôm qua từ Google Sheets", e);
+    }
+}
 
 function updateUI(raw) {
     let d = {
@@ -274,7 +295,10 @@ function resetBatch() { if(confirm("Reset sản lượng Batch/Ca?")) sendComman
 function resetTotal() { if(confirm("Reset Tổng sản lượng?")) sendCommand("CMD_RESET_TOTAL"); }
 function saveSettings() { showToast("Đã lưu cấu hình!"); }
 
-window.addEventListener("load", connectMQTT);
+window.addEventListener("load", () => {
+    connectMQTT();
+    fetchYesterdayData(); // Lấy số liệu ngày hôm qua từ Google Sheets ngay khi load trang
+});
 </script>
 </body>
 </html>
