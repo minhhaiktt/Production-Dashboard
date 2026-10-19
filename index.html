@@ -590,25 +590,21 @@ function updateUI(raw) {
         speed: raw.spd !== undefined ? raw.spd : (raw.speed !== undefined ? raw.speed : latestData.speed),
         status: raw.sts !== undefined ? raw.sts : (raw.status !== undefined ? raw.status : latestData.status),
         total: raw.tot !== undefined ? raw.tot : (raw.total !== undefined ? raw.total : latestData.total),
-        batch: raw.batch !== undefined ? raw.batch : latestData.batch,
+        batch: raw.batch !== undefined ? raw.batch : latestData.batch, // Biến batch riêng (nếu muốn reset theo mẻ)
         day: raw.day !== undefined ? raw.day : latestData.day,
         shift: raw.shift !== undefined ? raw.shift : latestData.shift,
         shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : (raw.shiftName || latestData.shiftName),
         
-        // Sản lượng từng ca (Hứng cả p1..p3 lẫn shiftProd1..3)
         shift1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.shift1),
         shift2: raw.p2 !== undefined ? raw.p2 : (raw.shiftProd2 !== undefined ? raw.shiftProd2 : latestData.shift2),
         shift3: raw.p3 !== undefined ? raw.p3 : (raw.shiftProd3 !== undefined ? raw.shiftProd3 : latestData.shift3),
         
-        // Thời gian Run từng ca (Hứng r1, r2, r3 từ MQTT)
-        shiftRun1: raw.r1 !== undefined ? raw.r1 : (raw.shiftRun1 !== undefined ? raw.shiftRun1 : latestData.shiftRun1),
-        shiftRun2: raw.r2 !== undefined ? raw.r2 : (raw.shiftRun2 !== undefined ? raw.shiftRun2 : latestData.shiftRun2),
-        shiftRun3: raw.r3 !== undefined ? raw.r3 : (raw.shiftRun3 !== undefined ? raw.shiftRun3 : latestData.shiftRun3),
-        
-        // Thời gian Stop từng ca (Hứng s1, s2, s3 từ MQTT)
-        shiftStop1: raw.s1 !== undefined ? raw.s1 : (raw.shiftStop1 !== undefined ? raw.shiftStop1 : latestData.shiftStop1),
-        shiftStop2: raw.s2 !== undefined ? raw.s2 : (raw.shiftStop2 !== undefined ? raw.shiftStop2 : latestData.shiftStop2),
-        shiftStop3: raw.s3 !== undefined ? raw.s3 : (raw.shiftStop3 !== undefined ? raw.shiftStop3 : latestData.shiftStop3)
+        r1: raw.r1 !== undefined ? raw.r1 : latestData.r1,
+        r2: raw.r2 !== undefined ? raw.r2 : latestData.r2,
+        r3: raw.r3 !== undefined ? raw.r3 : latestData.r3,
+        s1: raw.s1 !== undefined ? raw.s1 : latestData.s1,
+        s2: raw.s2 !== undefined ? raw.s2 : latestData.s2,
+        s3: raw.s3 !== undefined ? raw.s3 : latestData.s3
     };
 
     latestData = { ...latestData, ...d };
@@ -619,21 +615,30 @@ function updateUI(raw) {
     el.textContent = st; 
     el.className = "status " + st;
 
-    document.getElementById("batch").textContent = formatNumber(latestData.batch);
-    document.getElementById("day").textContent = formatNumber(latestData.day);
-    document.getElementById("total").textContent = formatNumber(latestData.total);
+    // --- ĐIỀU CHỈNH QUAN TRỌNG CHO CÁC LABEL ---
+    const currentShiftNum = Number(latestData.shift || 1);
+    
+    // 1. SẢN LƯỢNG CA: Phải hiển thị đúng sản lượng của riêng ca hiện tại (p1, p2 hoặc p3)
+    let currentShiftProduction = currentShiftNum === 1 ? latestData.shift1 : 
+                                 currentShiftNum === 2 ? latestData.shift2 : latestData.shift3;
+    document.getElementById("batch").textContent = formatNumber(currentShiftProduction);
 
-    const shift = Number(latestData.shift || 1);
-    document.getElementById("currentShift").textContent = latestData.shiftName || ("CA " + shift);
-    document.getElementById("shiftTime").textContent = getShiftTime(shift);
+    // 2. SẢN LƯỢNG NGÀY: Tổng sản lượng 3 ca trong ngày
+    document.getElementById("day").textContent = formatNumber(latestData.day);
+
+    // 3. TỔNG SẢN LƯỢNG: Tổng tích lũy thiết bị
+    document.getElementById("total").textContent = formatNumber(latestData.total);
+    // ------------------------------------------
+
+    document.getElementById("currentShift").textContent = latestData.shiftName || ("CA " + currentShiftNum);
+    document.getElementById("shiftTime").textContent = getShiftTime(currentShiftNum);
 
     for(let i = 1; i <= 3; i++) {
         document.getElementById("tableShift" + i).textContent = formatNumber(latestData["shift" + i]) + " m";
-        document.getElementById("tableRun" + i).textContent = formatTime(latestData["shiftRun" + i]);
-        document.getElementById("tableStop" + i).textContent = formatTime(latestData["shiftStop" + i]);
+        document.getElementById("tableRun" + i).textContent = formatTime(latestData["r" + i]);
+        document.getElementById("tableStop" + i).textContent = formatTime(latestData["s" + i]);
     }
 }
-
 // Toast Notification
 function showToast(msg) {
     const t = document.getElementById("toast");
