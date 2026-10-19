@@ -24,47 +24,46 @@
     --accent-purple: #a855f7;
     --accent-amber: #d97706;
 
-    font-size: clamp(14px, 0.95vw, 22px);
+    font-size: clamp(12px, 0.85vw, 18px);
 }
 
 body {
-    min-height: 100vh;
+    height: 100vh;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-dark);
     color: var(--text-main);
     display: flex; flex-direction: column;
-    overflow-y: auto; overflow-x: hidden;
+    overflow: hidden; /* Cố định toàn màn hình, không cho tràn cuộn */
 }
 
 .header {
     background: var(--card-bg);
-    padding: clamp(0.75rem, 1.2vw, 1.75rem) clamp(1rem, 2vw, 3rem);
+    padding: clamp(0.5rem, 0.8vw, 1.2rem) clamp(1rem, 1.5vw, 2.5rem);
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid var(--border-color);
 }
 
 .header .title {
-    font-size: clamp(1rem, 1.25vw, 1.8rem);
+    font-size: clamp(0.95rem, 1.15vw, 1.6rem);
     font-weight: 800; letter-spacing: 0.5px;
     color: var(--text-main);
 }
 
 .header .subtitle {
-    font-size: clamp(0.85rem, 1vw, 1.35rem);
+    font-size: clamp(0.75rem, 0.9vw, 1.2rem);
     color: #cbd5e1;
-    margin-top: 0.35rem;
+    margin-top: 0.2rem;
     font-weight: 600;
-    letter-spacing: 0.3px;
 }
 
 .connection {
-    display: flex; align-items: center; gap: 0.6rem;
-    font-size: clamp(0.85rem, 1vw, 1.3rem); font-weight: 600;
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: clamp(0.8rem, 0.95vw, 1.2rem); font-weight: 600;
 }
 
 .status-dot {
-    width: clamp(10px, 0.8vw, 16px);
-    height: clamp(10px, 0.8vw, 16px);
+    width: clamp(8px, 0.7vw, 14px);
+    height: clamp(8px, 0.7vw, 14px);
     border-radius: 50%;
     background-color: var(--accent-red);
     box-shadow: 0 0 8px rgba(231, 76, 60, 0.6);
@@ -82,46 +81,47 @@ body {
 }
 
 .nav button {
-    flex: 1; padding: clamp(0.6rem, 1vw, 1.4rem);
+    flex: 1; padding: clamp(0.4rem, 0.7vw, 1rem);
     border: none; background: var(--card-bg);
     color: var(--text-sub); font-weight: 700;
-    font-size: clamp(0.9rem, 1.1vw, 1.5rem);
+    font-size: clamp(0.85rem, 1vw, 1.3rem);
     cursor: pointer; transition: all 0.25s ease;
 }
 
 .nav button.active {
     color: var(--accent-blue);
-    border-bottom: 4px solid var(--accent-blue);
+    border-bottom: 3px solid var(--accent-blue);
     background: var(--bg-dark);
 }
 
 .container {
     width: 100%; max-width: 1920px; margin: 0 auto;
-    padding: clamp(1rem, 1.8vw, 3rem);
+    padding: clamp(0.6rem, 1.2vw, 1.8rem);
     display: flex; flex-direction: column;
-    gap: clamp(1rem, 1.5vw, 2.5rem); flex: 1;
+    gap: clamp(0.6rem, 1vw, 1.5rem); flex: 1;
+    overflow: hidden;
 }
 
-.page { display: none; flex-direction: column; gap: clamp(1rem, 1.5vw, 2.5rem); }
+.page { display: none; flex-direction: column; gap: clamp(0.6rem, 1vw, 1.5rem); height: 100%; }
 .page.active { display: flex; }
 
 .main-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
-    gap: clamp(1rem, 1.5vw, 2.5rem); align-items: stretch;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    gap: clamp(0.6rem, 1vw, 1.5rem); align-items: stretch;
 }
 
 .card {
     background: var(--card-bg);
-    border-radius: clamp(8px, 0.8vw, 16px);
-    padding: clamp(1rem, 1.5vw, 2.5rem);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    border-radius: clamp(6px, 0.6vw, 12px);
+    padding: clamp(0.7rem, 1.1vw, 1.8rem);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     border: 1px solid var(--border-color);
 }
 
 .card-title {
-    font-size: clamp(1.05rem, 1.25vw, 1.8rem);
-    font-weight: 700; margin-bottom: clamp(0.8rem, 1.2vw, 2rem);
+    font-size: clamp(0.95rem, 1.1vw, 1.5rem);
+    font-weight: 700; margin-bottom: clamp(0.5rem, 0.8vw, 1.2rem);
     color: var(--text-main);
 }
 
@@ -129,37 +129,36 @@ body {
     position: relative; display: flex; flex-direction: column;
     justify-content: center; align-items: center; text-align: center;
     background: var(--card-bg);
-    border-radius: clamp(8px, 0.8vw, 16px);
-    padding: clamp(2rem, 3vw, 4.5rem) clamp(1rem, 1.5vw, 2.5rem);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    border-radius: clamp(6px, 0.6vw, 12px);
+    padding: clamp(1rem, 2vw, 3rem) clamp(0.8rem, 1vw, 1.5rem);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     border: 1px solid var(--border-color);
-    min-height: clamp(280px, 22vw, 550px);
 }
 
 .shift-badge {
-    position: absolute; top: clamp(0.8rem, 1.2vw, 2rem); left: clamp(1rem, 1.5vw, 2.5rem);
+    position: absolute; top: clamp(0.6rem, 1vw, 1.5rem); left: clamp(0.8rem, 1.2vw, 1.8rem);
     text-align: left;
 }
 
-.shift-badge .shift-name { font-size: clamp(1.1rem, 1.4vw, 2.2rem); font-weight: 800; color: var(--text-main); }
-.shift-badge .shift-time { font-size: clamp(0.75rem, 0.9vw, 1.3rem); color: var(--text-sub); margin-top: 0.2rem; }
+.shift-badge .shift-name { font-size: clamp(1rem, 1.2vw, 1.8rem); font-weight: 800; color: var(--text-main); }
+.shift-badge .shift-time { font-size: clamp(0.7rem, 0.8vw, 1.1rem); color: var(--text-sub); margin-top: 0.1rem; }
 
 .speed-label-top {
-    font-size: clamp(0.95rem, 1.1vw, 1.6rem); font-weight: 700;
-    color: var(--text-sub); margin-top: clamp(1rem, 1.5vw, 2.5rem); letter-spacing: 1px;
+    font-size: clamp(0.85rem, 0.95vw, 1.3rem); font-weight: 700;
+    color: var(--text-sub); margin-top: clamp(0.5rem, 0.8vw, 1.2rem); letter-spacing: 1px;
 }
 
 .speed-value {
-    font-size: clamp(4rem, 6.5vw, 10rem); font-weight: 900;
-    color: var(--accent-blue); line-height: 1; margin: clamp(0.3rem, 0.8vw, 1.5rem) 0;
+    font-size: clamp(3.2rem, 5.2vw, 8rem); font-weight: 900;
+    color: var(--accent-blue); line-height: 1; margin: clamp(0.2rem, 0.5vw, 1rem) 0;
 }
 
-.speed-unit { font-size: clamp(1rem, 1.3vw, 1.8rem); color: var(--text-sub); font-weight: 700; }
+.speed-unit { font-size: clamp(0.9rem, 1.1vw, 1.5rem); color: var(--text-sub); font-weight: 700; }
 
 .status {
-    display: inline-block; padding: clamp(0.3rem, 0.5vw, 0.8rem) clamp(1rem, 1.5vw, 2.5rem);
-    border-radius: 50px; font-weight: 800; font-size: clamp(0.85rem, 1.05vw, 1.5rem);
-    margin-top: clamp(0.6rem, 1vw, 1.5rem);
+    display: inline-block; padding: clamp(0.2rem, 0.4vw, 0.6rem) clamp(0.8rem, 1.2vw, 2rem);
+    border-radius: 50px; font-weight: 800; font-size: clamp(0.75rem, 0.95vw, 1.3rem);
+    margin-top: clamp(0.4rem, 0.8vw, 1.2rem);
 }
 
 .status.RUN { background: rgba(46, 204, 113, 0.15); color: var(--accent-green); border: 2px solid var(--accent-green); }
@@ -167,40 +166,40 @@ body {
 
 .right-stack {
     display: flex; flex-direction: column;
-    gap: clamp(0.75rem, 1.2vw, 1.8rem); justify-content: space-between;
+    gap: clamp(0.5rem, 0.8vw, 1.2rem); justify-content: space-between;
 }
 
 .stat-row {
     flex: 1; background: var(--card-bg);
-    border-radius: clamp(8px, 0.8vw, 16px);
-    padding: clamp(1rem, 1.6vw, 2.5rem) clamp(1.2rem, 1.8vw, 2.8rem);
+    border-radius: clamp(6px, 0.6vw, 12px);
+    padding: clamp(0.7rem, 1.1vw, 1.6rem) clamp(1rem, 1.4vw, 2.2rem);
     display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    border-left: clamp(5px, 0.5vw, 10px) solid var(--accent-blue);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    border-left: clamp(4px, 0.4vw, 8px) solid var(--accent-blue);
     border-top: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
 }
 
-.stat-label { font-size: clamp(0.95rem, 1.2vw, 1.8rem); font-weight: 700; color: var(--text-sub); letter-spacing: 0.5px; }
+.stat-label { font-size: clamp(0.85rem, 1.05vw, 1.5rem); font-weight: 700; color: var(--text-sub); letter-spacing: 0.5px; }
 .stat-val-wrap { text-align: right; }
-.stat-value { font-size: clamp(1.6rem, 2.4vw, 3.8rem); font-weight: 800; color: var(--text-main); }
-.stat-unit { font-size: clamp(0.8rem, 1vw, 1.4rem); color: var(--text-sub); font-weight: 700; margin-left: 0.3rem; }
+.stat-value { font-size: clamp(1.4rem, 2vw, 3.2rem); font-weight: 800; color: var(--text-main); }
+.stat-unit { font-size: clamp(0.75rem, 0.9vw, 1.2rem); color: var(--text-sub); font-weight: 700; margin-left: 0.2rem; }
 
-.table-wrap { width: 100%; overflow-x: auto; border-radius: 8px; }
+.table-wrap { width: 100%; overflow-x: auto; border-radius: 6px; }
 table { width: 100%; border-collapse: collapse; text-align: left; }
 th, td {
-    padding: clamp(0.7rem, 1vw, 1.5rem) clamp(0.8rem, 1.2vw, 1.8rem);
+    padding: clamp(0.5rem, 0.75vw, 1.1rem) clamp(0.7rem, 1vw, 1.5rem);
     border-bottom: 1px solid var(--border-color); white-space: nowrap;
-    font-size: clamp(0.85rem, 1vw, 1.4rem);
+    font-size: clamp(0.8rem, 0.95vw, 1.25rem);
 }
 th { background-color: #111827; color: var(--text-sub); font-weight: 700; text-transform: uppercase; }
 
 button.action {
-    border: none; border-radius: clamp(6px, 0.5vw, 12px);
-    padding: clamp(0.6rem, 0.9vw, 1.4rem) clamp(1rem, 1.5vw, 2.2rem);
-    cursor: pointer; font-weight: 700; font-size: clamp(0.85rem, 1vw, 1.4rem);
-    margin-right: 0.6rem; margin-bottom: 0.6rem;
+    border: none; border-radius: clamp(5px, 0.4vw, 10px);
+    padding: clamp(0.5rem, 0.8vw, 1.2rem) clamp(0.9rem, 1.3vw, 2rem);
+    cursor: pointer; font-weight: 700; font-size: clamp(0.8rem, 0.95vw, 1.25rem);
+    margin-right: 0.5rem; margin-bottom: 0.5rem;
     transition: opacity 0.2s ease, transform 0.1s ease;
 }
 button.action:active { transform: scale(0.98); }
@@ -211,18 +210,18 @@ button.action:hover { opacity: 0.9; }
 .btn-danger { background: var(--accent-red); color: #ffffff; }
 
 .form-row {
-    display: grid; grid-template-columns: minmax(150px, 220px) 1fr;
-    align-items: center; margin-bottom: clamp(0.8rem, 1.2vw, 1.8rem);
-    gap: clamp(0.8rem, 1.2vw, 1.8rem);
+    display: grid; grid-template-columns: minmax(130px, 200px) 1fr;
+    align-items: center; margin-bottom: clamp(0.6rem, 1vw, 1.5rem);
+    gap: clamp(0.6rem, 1vw, 1.5rem);
 }
-@media (max-width: 768px) { .form-row { grid-template-columns: 1fr; gap: 0.4rem; } }
+@media (max-width: 768px) { .form-row { grid-template-columns: 1fr; gap: 0.3rem; } }
 
-.form-row label { font-weight: 700; color: var(--text-main); font-size: clamp(0.85rem, 1vw, 1.3rem); }
+.form-row label { font-weight: 700; color: var(--text-main); font-size: clamp(0.8rem, 0.95vw, 1.2rem); }
 input {
-    width: 100%; padding: clamp(0.5rem, 0.8vw, 1.2rem);
+    width: 100%; padding: clamp(0.4rem, 0.7vw, 1rem);
     background: #111827; border: 1px solid var(--border-color);
-    color: #ffffff; border-radius: clamp(4px, 0.4vw, 8px);
-    font-size: clamp(0.85rem, 1vw, 1.3rem);
+    color: #ffffff; border-radius: clamp(4px, 0.3vw, 6px);
+    font-size: clamp(0.8rem, 0.95vw, 1.2rem);
 }
 input:focus { border-color: var(--accent-blue); outline: none; }
 
@@ -230,12 +229,12 @@ input:focus { border-color: var(--accent-blue); outline: none; }
 .mqtt-off { color: var(--accent-red); font-weight: 700; }
 
 .toast {
-    position: fixed; right: clamp(15px, 2vw, 40px); bottom: clamp(15px, 2vw, 40px);
+    position: fixed; right: clamp(15px, 2vw, 30px); bottom: clamp(15px, 2vw, 30px);
     background: var(--card-bg); color: var(--text-main);
-    padding: clamp(0.8rem, 1.2vw, 1.8rem) clamp(1.2rem, 1.6vw, 2.5rem);
-    border-radius: clamp(6px, 0.6vw, 12px); display: none; z-index: 9999;
-    border: 1px solid var(--border-color); font-size: clamp(0.85rem, 1vw, 1.3rem);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    padding: clamp(0.7rem, 1vw, 1.5rem) clamp(1rem, 1.4vw, 2.2rem);
+    border-radius: clamp(5px, 0.5vw, 10px); display: none; z-index: 9999;
+    border: 1px solid var(--border-color); font-size: clamp(0.8rem, 0.95vw, 1.2rem);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 }
 </style>
 </head>
@@ -310,12 +309,11 @@ input:focus { border-color: var(--accent-blue); outline: none; }
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- DÒNG NGÀY HÔM TRƯỚC ĐÃ ĐƯỢC ĐƯA LÊN ĐẦU VÀ LÀM NỔI BẬT -->
                         <tr style="background-color: rgba(59, 130, 246, 0.18); font-weight: 800;">
-                            <td style="color: var(--accent-blue); font-size: 1.1em;">NGÀY HÔM TRƯỚC</td>
-                            <td style="font-size: 0.95em;">24 Giờ</td>
-                            <td id="tableYesterday" style="color: var(--accent-blue); font-size: 1.25em; font-weight: 900;">0,0 m</td>
-                            <td colspan="2" style="color: var(--text-sub); font-size: 0.9em; text-align: center;">(Tổng kết 3 ca ngày cũ)</td>
+                            <td style="color: var(--accent-blue); font-size: 1.05em;">NGÀY HÔM TRƯỚC</td>
+                            <td style="font-size: 0.9em;">24 Giờ</td>
+                            <td id="tableYesterday" style="color: var(--accent-blue); font-size: 1.2em; font-weight: 900;">0,0 m</td>
+                            <td colspan="2" style="color: var(--text-sub); font-size: 0.85em; text-align: center;">(Tổng kết 3 ca ngày cũ)</td>
                         </tr>
                         <tr>
                             <td>CA 1</td>
@@ -474,7 +472,6 @@ function updateUI(raw) {
         document.getElementById("tableStop" + i).textContent = formatTime(latestData["s" + i]);
     }
 
-    // Cập nhật sản lượng Ngày hôm trước
     document.getElementById("tableYesterday").textContent = formatNumber(latestData.yesterday) + " m";
 }
 
