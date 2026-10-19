@@ -1,3 +1,427 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hệ thống Giám sát Sản xuất - METER-01</title>
+<!-- MQTT.js qua WebSockets -->
+<script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
+<style>
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0; padding: 0;
+}
+
+:root {
+    --bg-dark: #121820;
+    --card-bg: #1f2937;
+    --border-color: #374151;
+    --text-main: #f3f4f6;
+    --text-sub: #9ca3af;
+    --accent-blue: #3b82f6;
+    --accent-green: #2ecc71;
+    --accent-red: #e74c3c;
+    --accent-purple: #a855f7;
+    --accent-amber: #d97706;
+
+    font-size: clamp(14px, 0.95vw, 20px);
+}
+
+body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    display: flex; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden;
+}
+
+.header {
+    background: var(--card-bg);
+    padding: clamp(0.6rem, 1vw, 1.4rem) clamp(1rem, 2vw, 2.5rem);
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header .title {
+    font-size: clamp(1.1rem, 1.4vw, 2rem);
+    font-weight: 800; letter-spacing: 0.5px;
+    color: var(--text-main);
+}
+
+.header .subtitle {
+    font-size: clamp(0.85rem, 1.05vw, 1.4rem);
+    color: #cbd5e1;
+    margin-top: 0.25rem;
+    font-weight: 600;
+}
+
+.connection {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-size: clamp(0.9rem, 1.1vw, 1.4rem); font-weight: 600;
+}
+
+.status-dot {
+    width: clamp(10px, 0.8vw, 16px);
+    height: clamp(10px, 0.8vw, 16px);
+    border-radius: 50%;
+    background-color: var(--accent-red);
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.6);
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.status-dot.connected {
+    background-color: var(--accent-green);
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
+}
+
+.nav {
+    background: var(--card-bg);
+    display: flex; border-bottom: 1px solid var(--border-color);
+}
+
+.nav button {
+    flex: 1; padding: clamp(0.5rem, 0.8vw, 1.2rem);
+    border: none; background: var(--card-bg);
+    color: var(--text-sub); font-weight: 700;
+    font-size: clamp(0.95rem, 1.15vw, 1.5rem);
+    cursor: pointer; transition: all 0.25s ease;
+}
+
+.nav button.active {
+    color: var(--accent-blue);
+    border-bottom: 4px solid var(--accent-blue);
+    background: var(--bg-dark);
+}
+
+.container {
+    width: 100%; max-width: 1920px; margin: 0 auto;
+    padding: clamp(0.8rem, 1.4vw, 2.2rem);
+    display: flex; flex-direction: column;
+    gap: clamp(0.8rem, 1.2vw, 1.8rem); flex: 1;
+}
+
+.page { display: none; flex-direction: column; gap: clamp(0.8rem, 1.2vw, 1.8rem); }
+.page.active { display: flex; }
+
+.main-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr));
+    gap: clamp(0.8rem, 1.2vw, 1.8rem); align-items: stretch;
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: clamp(8px, 0.7vw, 14px);
+    padding: clamp(0.8rem, 1.3vw, 2rem);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+}
+
+.card-title {
+    font-size: clamp(1rem, 1.2vw, 1.6rem);
+    font-weight: 700; margin-bottom: clamp(0.6rem, 1vw, 1.5rem);
+    color: var(--text-main);
+}
+
+.speed-box {
+    position: relative; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    background: var(--card-bg);
+    border-radius: clamp(8px, 0.7vw, 14px);
+    padding: clamp(1.5rem, 2.5vw, 3.5rem) clamp(1rem, 1.2vw, 2rem);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+}
+
+.shift-badge {
+    position: absolute; top: clamp(0.7rem, 1.1vw, 1.6rem); left: clamp(1rem, 1.4vw, 2rem);
+    text-align: left;
+}
+
+.shift-badge .shift-name { font-size: clamp(1.1rem, 1.35vw, 2rem); font-weight: 800; color: var(--text-main); }
+.shift-badge .shift-time { font-size: clamp(0.75rem, 0.85vw, 1.2rem); color: var(--text-sub); margin-top: 0.15rem; }
+
+.speed-label-top {
+    font-size: clamp(0.9rem, 1.05vw, 1.5rem); font-weight: 700;
+    color: var(--text-sub); margin-top: clamp(0.8rem, 1.2vw, 2rem); letter-spacing: 1px;
+}
+
+.speed-value {
+    font-size: clamp(3.8rem, 5.8vw, 9rem); font-weight: 900;
+    color: var(--accent-blue); line-height: 1; margin: clamp(0.2rem, 0.6vw, 1.2rem) 0;
+}
+
+.speed-unit { font-size: clamp(1rem, 1.2vw, 1.7rem); color: var(--text-sub); font-weight: 700; }
+
+.status {
+    display: inline-block; padding: clamp(0.25rem, 0.45vw, 0.7rem) clamp(1rem, 1.4vw, 2.2rem);
+    border-radius: 50px; font-weight: 800; font-size: clamp(0.85rem, 1vw, 1.4rem);
+    margin-top: clamp(0.5rem, 0.9vw, 1.3rem);
+}
+
+.status.RUN { background: rgba(46, 204, 113, 0.15); color: var(--accent-green); border: 2px solid var(--accent-green); }
+.status.STOP { background: rgba(231, 76, 60, 0.15); color: var(--accent-red); border: 2px solid var(--accent-red); }
+
+.right-stack {
+    display: flex; flex-direction: column;
+    gap: clamp(0.6rem, 1vw, 1.5rem); justify-content: space-between;
+}
+
+.stat-row {
+    flex: 1; background: var(--card-bg);
+    border-radius: clamp(8px, 0.7vw, 14px);
+    padding: clamp(0.8rem, 1.3vw, 2rem) clamp(1.2rem, 1.6vw, 2.4rem);
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.22);
+    border-left: clamp(5px, 0.45vw, 9px) solid var(--accent-blue);
+    border-top: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stat-label { font-size: clamp(0.9rem, 1.1vw, 1.6rem); font-weight: 700; color: var(--text-sub); letter-spacing: 0.5px; }
+.stat-val-wrap { text-align: right; }
+.stat-value { font-size: clamp(1.6rem, 2.2vw, 3.4rem); font-weight: 800; color: var(--text-main); }
+.stat-unit { font-size: clamp(0.8rem, 0.95vw, 1.3rem); color: var(--text-sub); font-weight: 700; margin-left: 0.25rem; }
+
+.table-wrap { width: 100%; overflow-x: auto; border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td {
+    padding: clamp(0.6rem, 0.85vw, 1.3rem) clamp(0.8rem, 1.1vw, 1.6rem);
+    border-bottom: 1px solid var(--border-color); white-space: nowrap;
+    font-size: clamp(0.85rem, 1.05vw, 1.4rem);
+}
+th { background-color: #111827; color: var(--text-sub); font-weight: 700; text-transform: uppercase; }
+
+button.action {
+    border: none; border-radius: clamp(6px, 0.45vw, 10px);
+    padding: clamp(0.55rem, 0.85vw, 1.3rem) clamp(1rem, 1.4vw, 2.1rem);
+    cursor: pointer; font-weight: 700; font-size: clamp(0.85rem, 1vw, 1.35rem);
+    margin-right: 0.5rem; margin-bottom: 0.5rem;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+}
+button.action:active { transform: scale(0.98); }
+button.action:hover { opacity: 0.9; }
+
+.btn-blue { background: var(--accent-blue); color: #ffffff; }
+.btn-orange { background: var(--accent-amber); color: #ffffff; }
+.btn-danger { background: var(--accent-red); color: #ffffff; }
+
+.form-row {
+    display: grid; grid-template-columns: minmax(140px, 210px) 1fr;
+    align-items: center; margin-bottom: clamp(0.7rem, 1vw, 1.6rem);
+    gap: clamp(0.7rem, 1vw, 1.6rem);
+}
+@media (max-width: 768px) { .form-row { grid-template-columns: 1fr; gap: 0.35rem; } }
+
+.form-row label { font-weight: 700; color: var(--text-main); font-size: clamp(0.85rem, 1vw, 1.25rem); }
+input {
+    width: 100%; padding: clamp(0.45rem, 0.75vw, 1.1rem);
+    background: #111827; border: 1px solid var(--border-color);
+    color: #ffffff; border-radius: clamp(4px, 0.35vw, 7px);
+    font-size: clamp(0.85rem, 1vw, 1.25rem);
+}
+input:focus { border-color: var(--accent-blue); outline: none; }
+
+.mqtt-ok { color: var(--accent-green); font-weight: 700; }
+.mqtt-off { color: var(--accent-red); font-weight: 700; }
+
+.toast {
+    position: fixed; right: clamp(15px, 2vw, 35px); bottom: clamp(15px, 2vw, 35px);
+    background: var(--card-bg); color: var(--text-main);
+    padding: clamp(0.75rem, 1.1vw, 1.6rem) clamp(1.1rem, 1.5vw, 2.3rem);
+    border-radius: clamp(6px, 0.55vw, 11px); display: none; z-index: 9999;
+    border: 1px solid var(--border-color); font-size: clamp(0.85rem, 1vw, 1.25rem);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5);
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <div class="title">CÔNG TY CỔ PHẦN BAO BÌ BIA SÀI GÒN</div>
+        <div class="subtitle">HỆ THỐNG GIÁM SÁT SẢN XUẤT - Phát triển bởi P.M.Hải</div>
+    </div>
+    <div class="connection">
+        <span id="statusDot" class="status-dot"></span>
+        <span id="mqttStatus" class="mqtt-off">Disconnected</span>
+    </div>
+</div>
+
+<div class="nav">
+    <button id="nav0" class="active" onclick="switchTab(0)">TỔNG QUAN</button>
+    <button id="nav1" onclick="checkPasswordAndSwitch()">CÀI ĐẶT</button>
+</div>
+
+<div class="container">
+    <div id="page0" class="page active">
+        <div class="main-layout">
+            <div class="speed-box">
+                <div class="shift-badge">
+                    <div id="currentShift" class="shift-name">CA 1</div>
+                    <div id="shiftTime" class="shift-time">06:00 - 14:00</div>
+                </div>
+                <div class="speed-label-top">TỐC ĐỘ HIỆN TẠI</div>
+                <div id="speed" class="speed-value">0</div>
+                <div class="speed-unit">m/min</div>
+                <span id="machineStatus" class="status STOP">STOP</span>
+            </div>
+
+            <div class="right-stack">
+                <div class="stat-row" style="border-left-color: var(--accent-blue);">
+                    <div class="stat-label">SẢN LƯỢNG CA</div>
+                    <div class="stat-val-wrap">
+                        <span id="batch" class="stat-value">0,0</span>
+                        <span class="stat-unit">mét</span>
+                    </div>
+                </div>
+                <div class="stat-row" style="border-left-color: var(--accent-green);">
+                    <div class="stat-label">SẢN LƯỢNG NGÀY</div>
+                    <div class="stat-val-wrap">
+                        <span id="day" class="stat-value">0,0</span>
+                        <span class="stat-unit">mét</span>
+                    </div>
+                </div>
+                <div class="stat-row" style="border-left-color: var(--accent-purple);">
+                    <div class="stat-label">TỔNG SẢN LƯỢNG</div>
+                    <div class="stat-val-wrap">
+                        <span id="total" class="stat-value">0,0</span>
+                        <span class="stat-unit">mét</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">CHI TIẾT TỪNG CA & LỊCH SỬ</div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>DANH MỤC</th>
+                            <th>THỜI GIAN</th>
+                            <th>SẢN LƯỢNG</th>
+                            <th>RUN</th>
+                            <th>STOP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background-color: rgba(59, 130, 246, 0.18); font-weight: 800;">
+                            <td style="color: var(--accent-blue); font-size: 1.1em;">NGÀY HÔM TRƯỚC</td>
+                            <td style="font-size: 0.95em;">24 Giờ</td>
+                            <td id="tableYesterday" style="color: var(--accent-blue); font-size: 1.25em; font-weight: 900;">0,0 m</td>
+                            <td colspan="2" style="color: var(--text-sub); font-size: 0.9em; text-align: center;">(Tổng kết 3 ca ngày cũ)</td>
+                        </tr>
+                        <tr>
+                            <td>CA 1</td>
+                            <td>06:00 - 14:00</td>
+                            <td id="tableShift1">0,0 m</td>
+                            <td id="tableRun1">00:00:00</td>
+                            <td id="tableStop1">00:00:00</td>
+                        </tr>
+                        <tr>
+                            <td>CA 2</td>
+                            <td>14:00 - 22:00</td>
+                            <td id="tableShift2">0,0 m</td>
+                            <td id="tableRun2">00:00:00</td>
+                            <td id="tableStop2">00:00:00</td>
+                        </tr>
+                        <tr>
+                            <td>CA 3</td>
+                            <td>22:00 - 06:00</td>
+                            <td id="tableShift3">0,0 m</td>
+                            <td id="tableRun3">00:00:00</td>
+                            <td id="tableStop3">00:00:00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="page1" class="page">
+        <div class="card">
+            <div class="card-title">CÀI ĐẶT THIẾT BỊ</div>
+            <div class="form-row">
+                <label for="wifiSSID">WiFi SSID</label>
+                <input id="wifiSSID" type="text" value="SABEPA NEW">
+            </div>
+            <div class="form-row">
+                <label for="wifiPassword">WiFi Password</label>
+                <input id="wifiPassword" type="password" value="Sabepa@123">
+            </div>
+            <div class="form-row">
+                <label for="settingDiameter">Đường kính trục (mm)</label>
+                <input id="settingDiameter" type="number" step="0.1" value="120">
+            </div>
+            <button class="action btn-blue" onclick="saveSettings()">LƯU CẤU HÌNH</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">GOOGLE SHEETS & RESET DỮ LIỆU</div>
+            <button class="action btn-blue" onclick="syncToGoogleSheet()">Đồng bộ Google Sheets</button>
+            <button class="action btn-orange" onclick="resetBatch()">Reset Batch</button>
+            <button class="action btn-danger" onclick="resetTotal()">Reset Tổng</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const MQTT_URL = "wss://broker.hivemq.com:8884/mqtt";
+const TELEMETRY_TOPIC = "factory/production/meter1";
+const CONTROL_TOPIC = "factory/production/control";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec";
+
+const ADMIN_PASSWORD = "123"; 
+
+let latestData = {
+    speed: 0, batch: 0, day: 0, yesterday: 0, total: 0,
+    shift: 1, shiftName: "CA 1", status: "STOP",
+    p1: 0, p2: 0, p3: 0,
+    r1: 0, r2: 0, r3: 0,
+    s1: 0, s2: 0, s3: 0
+};
+
+function switchTab(index) {
+    for(let i = 0; i < 2; i++) {
+        document.getElementById("page" + i).classList.remove("active");
+        document.getElementById("nav" + i).classList.remove("active");
+    }
+    document.getElementById("page" + index).classList.add("active");
+    document.getElementById("nav" + index).classList.add("active");
+}
+
+function checkPasswordAndSwitch() {
+    let pass = prompt("Nhập mật khẩu truy cập trang Cài đặt:");
+    if(pass === null) return;
+    if(pass === ADMIN_PASSWORD) {
+        switchTab(1);
+        showToast("Đăng nhập Cài đặt thành công!");
+    } else {
+        showToast("Sai mật khẩu truy cập!");
+    }
+}
+
+function formatNumber(v) { 
+    return Number(v || 0).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); 
+}
+
+function formatTime(sec) {
+    sec = Math.floor(Number(sec) || 0);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return String(h).padStart(2, '0') + ":" + String(m).padStart(2, '0') + ":" + String(s).padStart(2, '0');
+}
+
+function getShiftTime(s) { 
+    return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; 
+}
+
 function updateUI(raw) {
     let d = {
         speed: raw.spd !== undefined ? raw.spd : (raw.speed !== undefined ? raw.speed : latestData.speed),
@@ -24,23 +448,16 @@ function updateUI(raw) {
 
     latestData = { ...latestData, ...d };
 
-    // Chỉ cập nhật DOM nếu có dữ liệu khác
-    const spdTxt = Number(latestData.speed || 0).toFixed(0);
-    if (document.getElementById("speed").textContent !== spdTxt) {
-        document.getElementById("speed").textContent = spdTxt;
-    }
-
+    document.getElementById("speed").textContent = Number(latestData.speed || 0).toFixed(0);
     const st = latestData.status === "RUN" ? "RUN" : "STOP";
     const el = document.getElementById("machineStatus");
-    if (el.textContent !== st) {
-        el.textContent = st; 
-        el.className = "status " + st;
-    }
+    el.textContent = st; 
+    el.className = "status " + st;
 
     const currentShiftNum = Number(latestData.shift || 1);
+    
     let currentShiftProd = currentShiftNum === 1 ? latestData.p1 : 
                             currentShiftNum === 2 ? latestData.p2 : latestData.p3;
-
     document.getElementById("batch").textContent = formatNumber(currentShiftProd);
     document.getElementById("day").textContent = formatNumber(latestData.day);
     document.getElementById("total").textContent = formatNumber(latestData.total);
@@ -56,3 +473,96 @@ function updateUI(raw) {
 
     document.getElementById("tableYesterday").textContent = formatNumber(latestData.yesterday) + " m";
 }
+
+function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; 
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 3000);
+}
+
+let client = null;
+function connectMQTT() {
+    client = mqtt.connect(MQTT_URL, { clientId: "dash_" + Math.random().toString(16).substring(2), clean: true });
+    
+    client.on("connect", () => {
+        const mqttStatusEl = document.getElementById("mqttStatus");
+        mqttStatusEl.textContent = "Connected";
+        mqttStatusEl.className = "mqtt-ok";
+        document.getElementById("statusDot").classList.add("connected");
+        client.subscribe(TELEMETRY_TOPIC);
+        showToast("Đã kết nối máy chủ MQTT WebSocket");
+    });
+    
+    client.on("message", (t, m) => {
+        if(t === TELEMETRY_TOPIC) {
+            try { 
+                updateUI(JSON.parse(m.toString())); 
+            } catch(e) {
+                console.error("Lỗi parse JSON:", e);
+            }
+        }
+    });
+
+    client.on("close", () => {
+        const mqttStatusEl = document.getElementById("mqttStatus");
+        mqttStatusEl.textContent = "Disconnected";
+        mqttStatusEl.className = "mqtt-off";
+        document.getElementById("statusDot").classList.remove("connected");
+    });
+}
+
+function sendCommand(cmd) {
+    if(!client || !client.connected) { 
+        showToast("MQTT chưa kết nối!"); 
+        return; 
+    }
+    client.publish(CONTROL_TOPIC, cmd);
+    showToast("Đã gửi lệnh: " + cmd);
+}
+
+function resetBatch() { 
+    if(confirm("Xác nhận Reset sản lượng Batch?")) {
+        sendCommand("CMD_RESET_BATCH"); 
+    }
+}
+
+function resetTotal() { 
+    if(confirm("Xác nhận Reset Tổng sản lượng?")) sendCommand("CMD_RESET_TOTAL"); 
+}
+
+function saveSettings() { 
+    showToast("Đã lưu cấu hình thiết bị!"); 
+}
+
+async function syncToGoogleSheet() {
+    const data = {
+        device: "METER-01",
+        production: latestData.batch,
+        day: latestData.day,
+        yesterday: latestData.yesterday,
+        total: latestData.total,
+        speed: latestData.speed,
+        status: latestData.status,
+        shift_name: latestData.shiftName,
+        shift_time: getShiftTime(latestData.shift)
+    };
+    try {
+        await fetch(GOOGLE_SCRIPT_URL, { 
+            method: "POST", 
+            mode: "no-cors", 
+            headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+            body: JSON.stringify(data) 
+        });
+        showToast("Đã tự động đồng bộ Google Sheets!");
+    } catch(e) {
+        showToast("Lỗi kết nối đồng bộ Google Sheets!");
+    }
+}
+
+setInterval(() => { syncToGoogleSheet(); }, 3600000);
+
+window.addEventListener("load", connectMQTT);
+</script>
+</body>
+</html>
