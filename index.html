@@ -199,23 +199,40 @@ function checkPasswordAndSwitch() {
     else if(pass !== null) { showToast("Sai mật khẩu!"); }
 }
 
-function formatNumber(v) { return Number(v || 0).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+function formatNumber(v) { 
+    // Ép kiểu số an toàn, nếu là NaN hoặc không hợp lệ thì trả về 0
+    let num = parseFloat(v);
+    if (isNaN(num)) num = 0;
+    return num.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); 
+}
 function formatTime(sec) {
     sec = Math.floor(Number(sec) || 0);
     return String(Math.floor(sec/3600)).padStart(2,'0') + ":" + String(Math.floor((sec%3600)/60)).padStart(2,'0') + ":" + String(sec%60).padStart(2,'0');
 }
 function getShiftTime(s) { return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; }
 
-// Hàm lấy dữ liệu ngày hôm qua từ Google Sheets khi mở trang
+// Hàm lấy dữ liệu ngày hôm qua an toàn từ Google Sheets
 async function fetchYesterdayData() {
     try {
         let res = await fetch(GOOGLE_SCRIPT_URL);
         let data = await res.json();
-        if(data && data.yesterday !== undefined) {
-            document.getElementById("tableYesterday").textContent = formatNumber(data.yesterday) + " m";
+        
+        if (data && data.yesterday !== undefined && data.yesterday !== null) {
+            // Chuyển đổi dấu phẩy trong chuỗi (nếu có) thành dấu chấm trước khi parse
+            let valStr = String(data.yesterday).replace(',', '.');
+            let val = parseFloat(valStr);
+            
+            if (!isNaN(val)) {
+                document.getElementById("tableYesterday").textContent = formatNumber(val) + " m";
+            } else {
+                document.getElementById("tableYesterday").textContent = "0,0 m";
+            }
+        } else {
+            document.getElementById("tableYesterday").textContent = "0,0 m";
         }
     } catch(e) {
-        console.error("Không thể lấy dữ liệu ngày hôm qua từ Google Sheets", e);
+        console.error("Chưa lấy được dữ liệu ngày hôm qua:", e);
+        document.getElementById("tableYesterday").textContent = "0,0 m";
     }
 }
 
