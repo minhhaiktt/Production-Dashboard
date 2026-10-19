@@ -341,4 +341,221 @@ input:focus { border-color: var(--accent-blue); outline: none; }
     <div id="page1" class="page">
         <div class="card">
             <div class="card-title">CÀI ĐẶT THIẾT BỊ</div>
-            <div
+            <div class="form-row">
+                <label for="wifiSSID">WiFi SSID</label>
+                <input id="wifiSSID" type="text" value="SABEPA NEW">
+            </div>
+            <div class="form-row">
+                <label for="wifiPassword">WiFi Password</label>
+                <input id="wifiPassword" type="password" value="Sabepa@123">
+            </div>
+            <div class="form-row">
+                <label for="settingDiameter">Đường kính trục (mm)</label>
+                <input id="settingDiameter" type="number" step="0.1" value="120">
+            </div>
+            <button class="action btn-blue" onclick="saveSettings()">LƯU CẤU HÌNH</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">GOOGLE SHEETS & RESET DỮ LIỆU</div>
+            <button class="action btn-blue" onclick="syncToGoogleSheet()">Đồng bộ Google Sheets</button>
+            <button class="action btn-orange" onclick="resetBatch()">Reset Batch</button>
+            <button class="action btn-danger" onclick="resetTotal()">Reset Tổng</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const MQTT_URL = "wss://broker.hivemq.com:8884/mqtt";
+const TELEMETRY_TOPIC = "factory/production/meter1";
+const CONTROL_TOPIC = "factory/production/control";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzkYdEZtD0RJOqMdA3gU8SIuDNnk58lgexEJWroAFcXZGHgFxW_g3QK66CvfmIDQtsiw/exec";
+
+const ADMIN_PASSWORD = "123"; 
+
+let latestData = {
+    speed: 0, batch: 0, day: 0, total: 0,
+    shift: 1, shiftName: "CA 1", status: "STOP",
+    p1: 0, p2: 0, p3: 0,
+    r1: 0, r2: 0, r3: 0,
+    s1: 0, s2: 0, s3: 0
+};
+
+function switchTab(index) {
+    for(let i = 0; i < 2; i++) {
+        document.getElementById("page" + i).classList.remove("active");
+        document.getElementById("nav" + i).classList.remove("active");
+    }
+    document.getElementById("page" + index).classList.add("active");
+    document.getElementById("nav" + index).classList.add("active");
+}
+
+function checkPasswordAndSwitch() {
+    let pass = prompt("Nhập mật khẩu truy cập trang Cài đặt:");
+    if(pass === null) return;
+    if(pass === ADMIN_PASSWORD) {
+        switchTab(1);
+        showToast("Đăng nhập Cài đặt thành công!");
+    } else {
+        showToast("Sai mật khẩu truy cập!");
+    }
+}
+
+function formatNumber(v) { 
+    return Number(v || 0).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); 
+}
+
+function formatTime(sec) {
+    sec = Math.floor(Number(sec) || 0);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return String(h).padStart(2, '0') + ":" + String(m).padStart(2, '0') + ":" + String(s).padStart(2, '0');
+}
+
+function getShiftTime(s) { 
+    return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; 
+}
+
+function updateUI(raw) {
+    let d = {
+        speed: raw.spd !== undefined ? raw.spd : (raw.speed !== undefined ? raw.speed : latestData.speed),
+        status: raw.sts !== undefined ? raw.sts : (raw.status !== undefined ? raw.status : latestData.status),
+        total: raw.tot !== undefined ? raw.tot : (raw.total !== undefined ? raw.total : latestData.total),
+        batch: raw.batch !== undefined ? raw.batch : latestData.batch,
+        day: raw.day !== undefined ? raw.day : latestData.day,
+        shift: raw.shift !== undefined ? raw.shift : latestData.shift,
+        shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : (raw.shiftName || latestData.shiftName),
+        
+        p1: raw.p1 !== undefined ? raw.p1 : (raw.shiftProd1 !== undefined ? raw.shiftProd1 : latestData.p1),
+        p2: raw.p2 !== undefined ? raw.p2 : (raw.shiftProd2 !== undefined ? raw.shiftProd2 : latestData.p2),
+        p3: raw.p3 !== undefined ? raw.p3 : (raw.shiftProd3 !== undefined ? raw.shiftProd3 : latestData.p3),
+        
+        r1: raw.r1 !== undefined ? raw.r1 : (raw.shiftRun1 !== undefined ? raw.shiftRun1 : latestData.r1),
+        r2: raw.r2 !== undefined ? raw.r2 : (raw.shiftRun2 !== undefined ? raw.shiftRun2 : latestData.r2),
+        r3: raw.r3 !== undefined ? raw.r3 : (raw.shiftRun3 !== undefined ? raw.shiftRun3 : latestData.r3),
+        
+        s1: raw.s1 !== undefined ? raw.s1 : (raw.shiftStop1 !== undefined ? raw.shiftStop1 : latestData.s1),
+        s2: raw.s2 !== undefined ? raw.s2 : (raw.shiftStop2 !== undefined ? raw.shiftStop2 : latestData.s2),
+        s3: raw.s3 !== undefined ? raw.s3 : (raw.shiftStop3 !== undefined ? raw.shiftStop3 : latestData.s3)
+    };
+
+    latestData = { ...latestData, ...d };
+
+    document.getElementById("speed").textContent = Number(latestData.speed || 0).toFixed(0);
+    const st = latestData.status === "RUN" ? "RUN" : "STOP";
+    const el = document.getElementById("machineStatus");
+    el.textContent = st; 
+    el.className = "status " + st;
+
+    const currentShiftNum = Number(latestData.shift || 1);
+    
+    let currentShiftProd = currentShiftNum === 1 ? latestData.p1 : 
+                            currentShiftNum === 2 ? latestData.p2 : latestData.p3;
+    document.getElementById("batch").textContent = formatNumber(currentShiftProd);
+    document.getElementById("day").textContent = formatNumber(latestData.day);
+    document.getElementById("total").textContent = formatNumber(latestData.total);
+
+    document.getElementById("currentShift").textContent = latestData.shiftName || ("CA " + currentShiftNum);
+    document.getElementById("shiftTime").textContent = getShiftTime(currentShiftNum);
+
+    for(let i = 1; i <= 3; i++) {
+        document.getElementById("tableShift" + i).textContent = formatNumber(latestData["p" + i]) + " m";
+        document.getElementById("tableRun" + i).textContent = formatTime(latestData["r" + i]);
+        document.getElementById("tableStop" + i).textContent = formatTime(latestData["s" + i]);
+    }
+}
+
+function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; 
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 3000);
+}
+
+let client = null;
+function connectMQTT() {
+    client = mqtt.connect(MQTT_URL, { clientId: "dash_" + Math.random().toString(16).substring(2), clean: true });
+    
+    client.on("connect", () => {
+        const mqttStatusEl = document.getElementById("mqttStatus");
+        mqttStatusEl.textContent = "MQTT ONLINE";
+        mqttStatusEl.className = "mqtt-ok";
+        document.getElementById("statusDot").classList.add("connected");
+        client.subscribe(TELEMETRY_TOPIC);
+        showToast("Đã kết nối máy chủ MQTT WebSocket");
+    });
+    
+    client.on("message", (t, m) => {
+        if(t === TELEMETRY_TOPIC) {
+            try { 
+                updateUI(JSON.parse(m.toString())); 
+            } catch(e) {
+                console.error("Lỗi parse JSON:", e);
+            }
+        }
+    });
+
+    client.on("close", () => {
+        const mqttStatusEl = document.getElementById("mqttStatus");
+        mqttStatusEl.textContent = "MQTT OFFLINE";
+        mqttStatusEl.className = "mqtt-off";
+        document.getElementById("statusDot").classList.remove("connected");
+    });
+}
+
+function sendCommand(cmd) {
+    if(!client || !client.connected) { 
+        showToast("MQTT chưa kết nối!"); 
+        return; 
+    }
+    client.publish(CONTROL_TOPIC, cmd);
+    showToast("Đã gửi lệnh: " + cmd);
+}
+
+function resetBatch() { 
+    if(confirm("Xác nhận Reset sản lượng Batch?")) {
+        sendCommand("CMD_RESET_BATCH"); 
+    }
+}
+
+function resetTotal() { 
+    if(confirm("Xác nhận Reset Tổng sản lượng?")) sendCommand("CMD_RESET_TOTAL"); 
+}
+
+function saveSettings() { 
+    showToast("Đã lưu cấu hình thiết bị!"); 
+}
+
+async function syncToGoogleSheet() {
+    const data = {
+        device: "METER-01",
+        production: latestData.batch,
+        day: latestData.day,
+        total: latestData.total,
+        speed: latestData.speed,
+        status: latestData.status,
+        shift_name: latestData.shiftName,
+        shift_time: getShiftTime(latestData.shift)
+    };
+    try {
+        await fetch(GOOGLE_SCRIPT_URL, { 
+            method: "POST", 
+            mode: "no-cors", 
+            headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+            body: JSON.stringify(data) 
+        });
+        showToast("Đã tự động đồng bộ Google Sheets!");
+    } catch(e) {
+        showToast("Lỗi kết nối đồng bộ Google Sheets!");
+    }
+}
+
+setInterval(() => { syncToGoogleSheet(); }, 3600000);
+
+window.addEventListener("load", connectMQTT);
+</script>
+</body>
+</html>
