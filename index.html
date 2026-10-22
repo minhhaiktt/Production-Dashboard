@@ -140,7 +140,6 @@ input { width: 100%; padding: 0.7rem; background: #111827; border: 1px solid var
                         <tr><th>DANH MỤC</th><th>THỜI GIAN</th><th>SẢN LƯỢNG</th><th>RUN</th><th>STOP</th></tr>
                     </thead>
                     <tbody>
-                        <!-- DÒNG NGÀY HÔM TRƯỚC LẤY TRỰC TIẾP TỪ GOOGLE SHEETS -->
                         <tr style="background-color: rgba(59, 130, 246, 0.18); font-weight: 800;">
                             <td style="color: var(--accent-blue); font-size: 1.1em;">NGÀY HÔM TRƯỚC</td>
                             <td style="font-size: 0.95em;">24 Giờ</td>
@@ -200,55 +199,60 @@ function checkPasswordAndSwitch() {
 }
 
 function formatNumber(v) { 
-    // Ép kiểu số an toàn, nếu là NaN hoặc không hợp lệ thì trả về 0
     let num = parseFloat(v);
     if (isNaN(num)) num = 0;
     return num.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); 
 }
+
 function formatTime(sec) {
     sec = Math.floor(Number(sec) || 0);
     return String(Math.floor(sec/3600)).padStart(2,'0') + ":" + String(Math.floor((sec%3600)/60)).padStart(2,'0') + ":" + String(sec%60).padStart(2,'0');
 }
+
 function getShiftTime(s) { return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; }
 
-// Hàm lấy dữ liệu ngày hôm qua an toàn từ Google Sheets
-async function fetchYesterdayData() {
-    try {
-        let res = await fetch(GOOGLE_SCRIPT_URL);
-        let data = await res.json();
-        
-        if (data && data.yesterday !== undefined && data.yesterday !== null) {
-            // Chuyển đổi dấu phẩy trong chuỗi (nếu có) thành dấu chấm trước khi parse
-            let valStr = String(data.yesterday).replace(',', '.');
-            let val = parseFloat(valStr);
-            
-            if (!isNaN(val)) {
-                document.getElementById("tableYesterday").textContent = formatNumber(val) + " m";
-            } else {
-                document.getElementById("tableYesterday").textContent = "0,0 m";
+// Lấy dữ liệu an toàn tránh làm đơ ứng dụng
+function fetchYesterdayData() {
+    fetch(GOOGLE_SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.yesterday !== undefined && data.yesterday !== null) {
+                let valStr = String(data.yesterday).replace(',', '.');
+                let val = parseFloat(valStr);
+                if (!isNaN(val)) {
+                    document.getElementById("tableYesterday").textContent = formatNumber(val) + " m";
+                }
             }
-        } else {
-            document.getElementById("tableYesterday").textContent = "0,0 m";
-        }
-    } catch(e) {
-        console.error("Chưa lấy được dữ liệu ngày hôm qua:", e);
-        document.getElementById("tableYesterday").textContent = "0,0 m";
-    }
+        })
+        .catch(e => {
+            console.log("Bỏ qua lấy dữ liệu ngày hôm qua do lỗi kết nối:", e);
+        });
 }
 
 function updateUI(raw) {
+    // Ép kiểu các giá trị số và kiểm tra kỹ giá trị truyền lên
     let d = {
-        speed: raw.spd ?? raw.speed ?? latestData.speed,
-        status: raw.sts ?? raw.status ?? latestData.status,
-        total: raw.tot ?? raw.total ?? latestData.total,
-        batch: raw.batch ?? latestData.batch,
-        day: raw.day ?? latestData.day,
-        shift: raw.shift ?? latestData.shift,
-        shiftName: raw.shift === 1 ? "CA 1" : raw.shift === 2 ? "CA 2" : raw.shift === 3 ? "CA 3" : latestData.shiftName,
-        p1: raw.p1 ?? latestData.p1, p2: raw.p2 ?? latestData.p2, p3: raw.p3 ?? latestData.p3,
-        r1: raw.r1 ?? latestData.r1, r2: raw.r2 ?? latestData.r2, r3: raw.r3 ?? latestData.r3,
-        s1: raw.s1 ?? latestData.s1, s2: raw.s2 ?? latestData.s2, s3: raw.s3 ?? latestData.s3
+        speed: (raw.spd !== undefined) ? raw.spd : ((raw.speed !== undefined) ? raw.speed : latestData.speed),
+        status: (raw.sts !== undefined) ? raw.sts : ((raw.status !== undefined) ? raw.status : latestData.status),
+        total: (raw.tot !== undefined) ? raw.tot : ((raw.total !== undefined) ? raw.total : latestData.total),
+        batch: (raw.batch !== undefined) ? raw.batch : latestData.batch,
+        day: (raw.day !== undefined) ? raw.day : latestData.day,
+        shift: (raw.shift !== undefined) ? raw.shift : latestData.shift,
+        
+        p1: (raw.p1 !== undefined) ? raw.p1 : latestData.p1, 
+        p2: (raw.p2 !== undefined) ? raw.p2 : latestData.p2, 
+        p3: (raw.p3 !== undefined) ? raw.p3 : latestData.p3,
+        
+        r1: (raw.r1 !== undefined) ? raw.r1 : latestData.r1, 
+        r2: (raw.r2 !== undefined) ? raw.r2 : latestData.r2, 
+        r3: (raw.r3 !== undefined) ? raw.r3 : latestData.r3,
+        
+        s1: (raw.s1 !== undefined) ? raw.s1 : latestData.s1, 
+        s2: (raw.s2 !== undefined) ? raw.s2 : latestData.s2, 
+        s3: (raw.s3 !== undefined) ? raw.s3 : latestData.s3
     };
+    
+    d.shiftName = d.shift === 1 ? "CA 1" : d.shift === 2 ? "CA 2" : d.shift === 3 ? "CA 3" : latestData.shiftName;
     latestData = { ...latestData, ...d };
 
     const spdTxt = Number(latestData.speed || 0).toFixed(0);
@@ -260,7 +264,10 @@ function updateUI(raw) {
     if (el.textContent !== st) { el.textContent = st; el.className = "status " + st; }
 
     const curShift = Number(latestData.shift || 1);
+    
+    // Tự động chọn sản lượng ca tương ứng
     let curBatch = curShift === 1 ? latestData.p1 : curShift === 2 ? latestData.p2 : latestData.p3;
+    if (latestData.batch > 0 && curBatch === 0) curBatch = latestData.batch;
 
     document.getElementById("batch").textContent = formatNumber(curBatch);
     document.getElementById("day").textContent = formatNumber(latestData.day);
@@ -282,23 +289,47 @@ function showToast(msg) {
 }
 
 let client = null;
+let reconnectTimer = null;
+
 function connectMQTT() {
-    client = mqtt.connect(MQTT_URL, { clientId: "dash_" + Math.random().toString(16).substring(2), clean: true });
+    if (client) {
+        try { client.end(true); } catch(e) {}
+    }
+
+    client = mqtt.connect(MQTT_URL, { 
+        clientId: "dash_" + Math.random().toString(16).substring(2), 
+        clean: true,
+        reconnectPeriod: 3000, // Tự động kết nối lại sau 3s nếu đứt kết nối
+        connectTimeout: 5000
+    });
+
     client.on("connect", () => {
+        console.log("MQTT Connected!");
         document.getElementById("mqttStatus").textContent = "Connected";
         document.getElementById("mqttStatus").className = "mqtt-ok";
         document.getElementById("statusDot").classList.add("connected");
         client.subscribe(TELEMETRY_TOPIC);
     });
+
     client.on("message", (t, m) => {
         if(t === TELEMETRY_TOPIC) {
-            try { updateUI(JSON.parse(m.toString())); } catch(e) {}
+            try { 
+                let data = JSON.parse(m.toString());
+                updateUI(data); 
+            } catch(e) {
+                console.error("Lỗi parse JSON:", e);
+            }
         }
     });
+
     client.on("close", () => {
         document.getElementById("mqttStatus").textContent = "Disconnected";
         document.getElementById("mqttStatus").className = "mqtt-off";
         document.getElementById("statusDot").classList.remove("connected");
+    });
+
+    client.on("error", (err) => {
+        console.error("MQTT Error:", err);
     });
 }
 
@@ -314,7 +345,7 @@ function saveSettings() { showToast("Đã lưu cấu hình!"); }
 
 window.addEventListener("load", () => {
     connectMQTT();
-    fetchYesterdayData(); // Lấy số liệu ngày hôm qua từ Google Sheets ngay khi load trang
+    fetchYesterdayData();
 });
 </script>
 </body>
