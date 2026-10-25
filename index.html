@@ -173,7 +173,11 @@ input { width: 100%; padding: 0.7rem; background: #111827; border: 1px solid var
 <div id="toast" class="toast"></div>
 
 <script>
-const MQTT_URL = "wss://broker.emqx.io:8084/mqtt";
+// Cấu hình kết nối sang EMQX Cloud riêng (Cổng WSS 8084 qua tên miền riêng của anh)
+const MQTT_URL = "wss://h2831a02.ala.asia-southeast1.emqxssl.com:8084/mqtt";
+const MQTT_USERNAME = "Haipm"; // Thay bằng Username anh vừa tạo
+const MQTT_PASSWORD = "334576"; // Thay bằng Password anh vừa tạo
+
 const TELEMETRY_TOPIC = "factory/production/meter1";
 const CONTROL_TOPIC = "factory/production/control";
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyZTHXtmBUS4lpvzAqQMBgtQfpL4Sxi1CyUzcMudj_psXlkcrDTD8E5GCYUHi8YsKEYKA/exec";
@@ -211,7 +215,6 @@ function formatTime(sec) {
 
 function getShiftTime(s) { return s === 1 ? "06:00 - 14:00" : s === 2 ? "14:00 - 22:00" : "22:00 - 06:00"; }
 
-// Lấy dữ liệu an toàn tránh làm đơ ứng dụng
 function fetchYesterdayData() {
     fetch(GOOGLE_SCRIPT_URL)
         .then(res => res.json())
@@ -230,7 +233,6 @@ function fetchYesterdayData() {
 }
 
 function updateUI(raw) {
-    // Ép kiểu các giá trị số và kiểm tra kỹ giá trị truyền lên
     let d = {
         speed: (raw.spd !== undefined) ? raw.spd : ((raw.speed !== undefined) ? raw.speed : latestData.speed),
         status: (raw.sts !== undefined) ? raw.sts : ((raw.status !== undefined) ? raw.status : latestData.status),
@@ -265,7 +267,6 @@ function updateUI(raw) {
 
     const curShift = Number(latestData.shift || 1);
     
-    // Tự động chọn sản lượng ca tương ứng
     let curBatch = curShift === 1 ? latestData.p1 : curShift === 2 ? latestData.p2 : latestData.p3;
     if (latestData.batch > 0 && curBatch === 0) curBatch = latestData.batch;
 
@@ -289,22 +290,24 @@ function showToast(msg) {
 }
 
 let client = null;
-let reconnectTimer = null;
 
 function connectMQTT() {
     if (client) {
         try { client.end(true); } catch(e) {}
     }
 
+    // Kết nối kèm theo thông tin Username và Password đã tạo trên EMQX Cloud
     client = mqtt.connect(MQTT_URL, { 
         clientId: "dash_" + Math.random().toString(16).substring(2), 
+        username: MQTT_USERNAME,
+        password: MQTT_PASSWORD,
         clean: true,
-        reconnectPeriod: 3000, // Tự động kết nối lại sau 3s nếu đứt kết nối
+        reconnectPeriod: 3000,
         connectTimeout: 5000
     });
 
     client.on("connect", () => {
-        console.log("MQTT Connected!");
+        console.log("MQTT Connected to EMQX Cloud!");
         document.getElementById("mqttStatus").textContent = "Connected";
         document.getElementById("mqttStatus").className = "mqtt-ok";
         document.getElementById("statusDot").classList.add("connected");
