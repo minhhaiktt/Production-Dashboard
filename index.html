@@ -301,6 +301,7 @@ function connectMQTT() {
         clientId: "dash_" + Math.random().toString(16).substring(2), 
         username: MQTT_USERNAME,
         password: MQTT_PASSWORD,
+        path: "/mqtt", // Đường dẫn WebSocket bắt buộc đối với EMQX Cloud v5
         clean: true,
         reconnectPeriod: 3000,
         connectTimeout: 5000
