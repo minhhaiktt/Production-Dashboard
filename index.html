@@ -174,7 +174,7 @@ input { width: 100%; padding: 0.7rem; background: #111827; border: 1px solid var
 
 <script>
 // Cấu hình kết nối sang EMQX Cloud riêng (Cổng WSS 8084 qua tên miền riêng của anh)
-const MQTT_URL = "wss://h2831a02.ala.asia-southeast1.emqxssl.com:8084/mqtt";
+const MQTT_URL = "wss://h2831a02.ala.asia-southeast1.emqxsl.com:8084/mqtt";
 const MQTT_USERNAME = "Haipm"; // Thay bằng Username anh vừa tạo
 const MQTT_PASSWORD = "334576"; // Thay bằng Password anh vừa tạo
 
@@ -301,7 +301,6 @@ function connectMQTT() {
         clientId: "dash_" + Math.random().toString(16).substring(2), 
         username: MQTT_USERNAME,
         password: MQTT_PASSWORD,
-        path: "/mqtt", // Đường dẫn WebSocket bắt buộc đối với EMQX Cloud v5
         clean: true,
         reconnectPeriod: 3000,
         connectTimeout: 5000
