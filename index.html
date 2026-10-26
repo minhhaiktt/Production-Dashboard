@@ -173,10 +173,10 @@ input { width: 100%; padding: 0.7rem; background: #111827; border: 1px solid var
 <div id="toast" class="toast"></div>
 
 <script>
-// Cấu hình kết nối sang EMQX Cloud riêng (Cổng WSS 8084 qua tên miền riêng của anh)
-const MQTT_URL = "wss://h2831a02.ala.asia-southeast1.emqxsl.com:8084/mqtt";
-const MQTT_USERNAME = "Haipm"; // Thay bằng Username anh vừa tạo
-const MQTT_PASSWORD = "334576"; // Thay bằng Password anh vừa tạo
+// ĐÃ SỬA: Loại bỏ chữ /mqtt thừa ở cuối URL để tương thích tuyệt đối với EMQX Cloud v5
+const MQTT_URL = "wss://h2831a02.ala.asia-southeast1.emqxsl.com:8084";
+const MQTT_USERNAME = "Haipm"; 
+const MQTT_PASSWORD = "334576"; 
 
 const TELEMETRY_TOPIC = "factory/production/meter1";
 const CONTROL_TOPIC = "factory/production/control";
@@ -246,110 +246,4 @@ function updateUI(raw) {
         p3: (raw.p3 !== undefined) ? raw.p3 : latestData.p3,
         
         r1: (raw.r1 !== undefined) ? raw.r1 : latestData.r1, 
-        r2: (raw.r2 !== undefined) ? raw.r2 : latestData.r2, 
-        r3: (raw.r3 !== undefined) ? raw.r3 : latestData.r3,
-        
-        s1: (raw.s1 !== undefined) ? raw.s1 : latestData.s1, 
-        s2: (raw.s2 !== undefined) ? raw.s2 : latestData.s2, 
-        s3: (raw.s3 !== undefined) ? raw.s3 : latestData.s3
-    };
-    
-    d.shiftName = d.shift === 1 ? "CA 1" : d.shift === 2 ? "CA 2" : d.shift === 3 ? "CA 3" : latestData.shiftName;
-    latestData = { ...latestData, ...d };
-
-    const spdTxt = Number(latestData.speed || 0).toFixed(0);
-    const spdEl = document.getElementById("speed");
-    if (spdEl.textContent !== spdTxt) spdEl.textContent = spdTxt;
-
-    const st = latestData.status === "RUN" ? "RUN" : "STOP";
-    const el = document.getElementById("machineStatus");
-    if (el.textContent !== st) { el.textContent = st; el.className = "status " + st; }
-
-    const curShift = Number(latestData.shift || 1);
-    
-    let curBatch = curShift === 1 ? latestData.p1 : curShift === 2 ? latestData.p2 : latestData.p3;
-    if (latestData.batch > 0 && curBatch === 0) curBatch = latestData.batch;
-
-    document.getElementById("batch").textContent = formatNumber(curBatch);
-    document.getElementById("day").textContent = formatNumber(latestData.day);
-    document.getElementById("total").textContent = formatNumber(latestData.total);
-    document.getElementById("currentShift").textContent = latestData.shiftName;
-    document.getElementById("shiftTime").textContent = getShiftTime(curShift);
-
-    for(let i = 1; i <= 3; i++) {
-        document.getElementById("tableShift" + i).textContent = formatNumber(latestData["p" + i]) + " m";
-        document.getElementById("tableRun" + i).textContent = formatTime(latestData["r" + i]);
-        document.getElementById("tableStop" + i).textContent = formatTime(latestData["s" + i]);
-    }
-}
-
-function showToast(msg) {
-    const t = document.getElementById("toast");
-    t.textContent = msg; t.style.display = "block";
-    setTimeout(() => { t.style.display = "none"; }, 3000);
-}
-
-let client = null;
-
-function connectMQTT() {
-    if (client) {
-        try { client.end(true); } catch(e) {}
-    }
-
-    // Kết nối kèm theo thông tin Username và Password đã tạo trên EMQX Cloud
-    client = mqtt.connect(MQTT_URL, { 
-        clientId: "dash_" + Math.random().toString(16).substring(2), 
-        username: MQTT_USERNAME,
-        password: MQTT_PASSWORD,
-        clean: true,
-        reconnectPeriod: 3000,
-        connectTimeout: 5000
-    });
-
-    client.on("connect", () => {
-        console.log("MQTT Connected to EMQX Cloud!");
-        document.getElementById("mqttStatus").textContent = "Connected";
-        document.getElementById("mqttStatus").className = "mqtt-ok";
-        document.getElementById("statusDot").classList.add("connected");
-        client.subscribe(TELEMETRY_TOPIC);
-    });
-
-    client.on("message", (t, m) => {
-        if(t === TELEMETRY_TOPIC) {
-            try { 
-                let data = JSON.parse(m.toString());
-                updateUI(data); 
-            } catch(e) {
-                console.error("Lỗi parse JSON:", e);
-            }
-        }
-    });
-
-    client.on("close", () => {
-        document.getElementById("mqttStatus").textContent = "Disconnected";
-        document.getElementById("mqttStatus").className = "mqtt-off";
-        document.getElementById("statusDot").classList.remove("connected");
-    });
-
-    client.on("error", (err) => {
-        console.error("MQTT Error:", err);
-    });
-}
-
-function sendCommand(cmd) {
-    if(!client || !client.connected) { showToast("MQTT chưa kết nối!"); return; }
-    client.publish(CONTROL_TOPIC, cmd);
-    showToast("Đã gửi lệnh: " + cmd);
-}
-
-function resetBatch() { if(confirm("Reset sản lượng Batch/Ca?")) sendCommand("CMD_RESET_BATCH"); }
-function resetTotal() { if(confirm("Reset Tổng sản lượng?")) sendCommand("CMD_RESET_TOTAL"); }
-function saveSettings() { showToast("Đã lưu cấu hình!"); }
-
-window.addEventListener("load", () => {
-    connectMQTT();
-    fetchYesterdayData();
-});
-</script>
-</body>
-</html>
+        r2
